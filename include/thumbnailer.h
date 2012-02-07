@@ -27,5 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 
 int tve_open_video (const char *fname);

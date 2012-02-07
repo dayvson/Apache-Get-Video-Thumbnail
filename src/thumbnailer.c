@@ -27,22 +27,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-
+#include "thumbnailer.h"
 
 static void
 error (const char *msg)
 {
   fprintf (stderr, msg);
   fprintf (stderr, "\n");
-  exit (1);
 }
 
 
-int
-tve_open_video (const char *fname)
+int tve_open_video (const char *fname)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
@@ -53,10 +48,12 @@ tve_open_video (const char *fname)
   if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
     {
       error("avformat_open_input() has failed");
+	return -1;
     }
-  if (av_find_stream_info(format_ctx) < 0)
+  if (avformat_find_stream_info(format_ctx, NULL) < 0)
     {
       error("av_find_stream_info() has failed");
+	return -1;
     }
 
   videostream = -1;
@@ -74,9 +71,15 @@ tve_open_video (const char *fname)
 
   codec_ctx = format_ctx->streams[videostream]->codec;
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
-    error("codec not found");
-  if (avcodec_open (codec_ctx, codec) < 0)
-    error("unable to open codec");
+	{
+    	error("codec not found");
+		return -1;
+	}
+	if (avcodec_open2 (codec_ctx, codec, NULL) < 0)
+	{
+		error("unable to open codec");
+		return -2;		
+	}
 
   return 0;
 }

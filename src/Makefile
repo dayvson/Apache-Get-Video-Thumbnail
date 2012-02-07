@@ -32,7 +32,8 @@ include ../defines.mk
 MARCH:=$(shell uname -m)
 
 # Standard VARS, may be overwritten by external parameters
-FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH)
+CFLAGS = -I../include -lavformat -lavcodec
+FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
 LIBS  = -lstdc++
 
 .PHONY : all
@@ -49,5 +50,7 @@ clean:
 
 # Enter a section for each target
 apxs: 
-	apxs -c module_main.c -o $(BINNAME) $(LIBS) $(FLAGS)
+	apxs -c $(FLAGS) module_main.c thumbnailer.c -o $(BINNAME) $(LIBS) 
 
+test:
+	gcc $(CFLAGS) thumbnailer.c ../test/main.c -o $(NAME)

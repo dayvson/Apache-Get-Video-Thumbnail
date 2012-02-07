@@ -31,6 +31,7 @@
 #include "httpd.h"
 #include "http_config.h"
 #include "ap_config.h"
+#include "thumbnailer.h"
 
 // Just define the module, for references.
 // Go to the last lines to see its value
@@ -64,7 +65,10 @@ static int module_handler(request_rec *r) {
 
    // If anything is unexpected,
    // Consider by default the module is enabled and the request was invalid
-   return HTTP_NOT_FOUND;
+	if (tve_open_video("/Users/tiagopadua/Movies/cartoons.avi") == 0)
+		return DECLINED;
+	else
+   		return HTTP_NOT_FOUND;
 }
 
 static void register_hooks (apr_pool_t *p) {
