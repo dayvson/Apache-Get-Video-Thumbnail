@@ -37,42 +37,64 @@ error (const char *msg)
 }
 
 
-int tve_open_video (const char *fname)
+int tve_open_video (const char *fname, int64_t second)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
   AVCodec *codec;
+  uint8_t *frame_buffer = NULL;
+
+  AVFrame *frame_av = NULL;
+  AVFrame *frameRGB_av = NULL;
+  size_t uncompressed_size;
   size_t i;
+  float scale = 0.0;
+  float scale_x = 0.0;
+  float scale_y = 0.0;
+  float scale_new = 0.0;
+  float scale_sws = 0.0;
+
+  int sws_width = 0;
+  int sws_height = 0;
+  int rc;  
   int videostream;
 
-  if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
-    {
-      error("avformat_open_input() has failed");
-	return -1;
-    }
-  if (avformat_find_stream_info(format_ctx, NULL) < 0)
-    {
-      error("av_find_stream_info() has failed");
-	return -1;
-    }
 
+
+  if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
+  {
+    error("avformat_open_input() has failed");
+    return -1;
+  }
+  if (avformat_find_stream_info(format_ctx, NULL) < 0)
+  {
+    error("av_find_stream_info() has failed");
+    return -1;
+  }
+  if ((format_ctx->duration > 0) && (second > (format_ctx->duration / AV_TIME_BASE))) 
+  {
+    error("duration zero or second request over duration");    
+    return -3;
+  }
   videostream = -1;
   for (i = 0; i < format_ctx->nb_streams; i++)
+  {
+    if (format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
     {
-      if (format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
-        {
-          videostream = i;
-          break;
-        }
+      videostream = i;
+      break;
     }
+  }
 
   if (videostream == -1)
-    error("videostream not found");
+  {
+    error("videostream not found");    
+  }
 
   codec_ctx = format_ctx->streams[videostream]->codec;
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
 	{
-    	error("codec not found");
+    error("codec not found");
 		return -1;
 	}
 	if (avcodec_open2 (codec_ctx, codec, NULL) < 0)
@@ -80,6 +102,45 @@ int tve_open_video (const char *fname)
 		error("unable to open codec");
 		return -2;		
 	}
+  
+  int64_t width = codec_ctx->width;
+  int64_t height = codec_ctx->height;
+  
+  scale     = (float) codec_ctx->width / codec_ctx->height;
+  scale_new = (float) width / height;
 
+  sws_width = width;
+  sws_height = height;
+
+  if (scale != scale_new) 
+  {
+    scale_x = (float) width / codec_ctx->width;
+    scale_x = (float) height / codec_ctx->height;
+    scale_sws = (scale_x > scale_y) ? scale_x : scale_y;
+    sws_width = codec_ctx->width * scale_sws + 0.5;
+    sws_height = codec_ctx->height * scale_sws + 0.5;  
+  }
+
+	frame_av = avcodec_alloc_frame();
+  frameRGB_av = avcodec_alloc_frame();
+  
+  if ((frame_av == NULL) || (frameRGB_av == NULL)) 
+  {
+		error("Can't allocate memory to frame");
+		return -2;  
+  }
+  //frame_buffer = av_malloc( avpicture_get_size( PIX_FMT_YUV420P, title->width, title->height ) );
+  int size = avpicture_get_size(codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height);
+//  frame_buffer = av_malloc(size);  
+/*
+  uncompressed_size = avpicture_get_size(PIX_FMT_RGB24, sws_width, sws_height) * sizeof(uint8_t);
+  frame_buffer = (uint8_t *) av_malloc(uncompressed_size);
+
+  avpicture_fill((AVPicture *) frameRGB_av, frame_buffer, PIX_FMT_RGB24, sws_width, sws_height);
+  if ((rc = av_seek_frame(format_ctx, -1, second * AV_TIME_BASE, 0)) < 0) 
+  {
+    error("Seek on invalid time");
+    return -4;
+  } */
   return 0;
 }
