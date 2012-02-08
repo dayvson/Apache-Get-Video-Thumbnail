@@ -32,7 +32,7 @@ include ../defines.mk
 MARCH:=$(shell uname -m)
 
 # Standard VARS, may be overwritten by external parameters
-CFLAGS = -I../include -lavformat -lavcodec
+CFLAGS = -I../include -lavformat -lavcodec -lavutil -lswscale
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
 LIBS  = -lstdc++
 

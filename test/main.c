@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "thumbnailer.h"
 
 int main(int argc, char*argv)
