@@ -29,28 +29,29 @@
 
 include ../defines.mk
 
-MARCH:=$(shell uname -m)
-
 # Standard VARS, may be overwritten by external parameters
-CFLAGS = -I../include -lavformat -lavcodec
+CFLAGS = -I../include
+CLIBS = -lavcodec -lavformat
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
 LIBS  = -lstdc++
 
 .PHONY : all
 all: apxs
 
-#.PHONY : install
+.PHONY : install
 install: apxs
 	cp -f .libs/$(LIBNAME) $(APACHE_MODULES_DIR)
 	echo "Don't forget to edit httpd.conf"
 
 .PHONY : clean
 clean:
-	rm -Rf $(BINNAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs
+	rm -Rf $(BINNAME) $(NAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs
 
-# Enter a section for each target
 apxs: 
 	apxs -c $(FLAGS) module_main.c thumbnailer.c -o $(BINNAME) $(LIBS) 
 
-test:
-	gcc $(CFLAGS) thumbnailer.c ../test/main.c -o $(NAME)
+test: objects
+	gcc $(CFLAGS) $(CLIBS) thumbnailer.o ../test/main.c -o $(NAME)
+
+objects:
+	gcc -c thumbnailer.c -o thumbnailer.o $(CFLAGS)

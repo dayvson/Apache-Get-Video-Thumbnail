@@ -38,5 +38,6 @@ BINNAME:=mod_$(NAME).la
 CVSNAME:=str_$(NAME)
 PACKGNAME:=$(NAME)_v$(MAJOR).$(MINOR)
 
+MARCH:=$(shell uname -m)
 LIBNAME:=mod_$(NAME).so
 APACHE_MODULES_DIR:=/usr/libexec/apache2/
