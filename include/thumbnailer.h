@@ -28,7 +28,11 @@
  * SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <jpeglib.h>
 
-int tve_open_video (const char *fname);
+int tve_open_video (const char *fname, int64_t second);

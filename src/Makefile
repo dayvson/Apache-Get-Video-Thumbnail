@@ -31,7 +31,7 @@ include ../defines.mk
 
 # Standard VARS, may be overwritten by external parameters
 CFLAGS = -I../include
-CLIBS = -lavcodec -lavformat
+CLIBS = -lavcodec -lavformat -ljpeg
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
 LIBS  = -lstdc++
 
