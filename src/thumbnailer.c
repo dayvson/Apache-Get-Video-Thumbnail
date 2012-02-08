@@ -44,10 +44,10 @@ int tve_open_video (const char *fname, int64_t second)
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
   AVCodec *codec;
-  uint8_t *frame_buffer = NULL;
-
+  AVPacket packet_av;
   AVFrame *frame_av = NULL;
   AVFrame *frameRGB_av = NULL;
+  uint8_t *frame_buffer = NULL;
   size_t uncompressed_size;
   size_t i;
   float scale = 0.0;
@@ -58,8 +58,9 @@ int tve_open_video (const char *fname, int64_t second)
 
   int sws_width = 0;
   int sws_height = 0;
-  int rc;
-  int videostream;
+  int rc = 0;  
+  int video_stream = 0;
+  int frame_end = 0;
 
   if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
   {
@@ -76,22 +77,22 @@ int tve_open_video (const char *fname, int64_t second)
     error("duration zero or second request over duration");
     return -3;
   }
-  videostream = -1;
+  video_stream = -1;
   for (i = 0; i < format_ctx->nb_streams; i++)
   {
     if (format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
     {
-      videostream = i;
+      video_stream = i;
       break;
     }
   }
 
-  if (videostream == -1)
+  if (video_stream == -1)
   {
     error("videostream not found");
   }
 
-  codec_ctx = format_ctx->streams[videostream]->codec;
+  codec_ctx = format_ctx->streams[video_stream]->codec;
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
     {
     error("codec not found");
@@ -144,7 +145,27 @@ int tve_open_video (const char *fname, int64_t second)
     return -4;
   }
 
+  while (!frame_end && av_read_frame(format_ctx, &packet_av) >= 0) 
+  {  
+    if (packet_av.stream_index == video_stream) 
+    {
+      avcodec_decode_video2(codec_ctx, frame_av, &frame_end, &packet_av); 
+    }
+    if (frame_end) 
+    {
+      struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
+              codec_ctx->pix_fmt, sws_width, sws_height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+      sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
+                          codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
+      sws_freeContext(image_ctx);
+    }  
+  }
   free(frame_buffer);
-
   return 0;
 }
+
+
+
+
+
+
