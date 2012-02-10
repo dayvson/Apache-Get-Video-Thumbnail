@@ -28,6 +28,8 @@
  * SUCH DAMAGE.
  */
 #include "thumbnailer.h"
+#include "stdlib.h"
+#include "stdio.h"
 
 static void
 error (const char *msg)
@@ -36,8 +38,76 @@ error (const char *msg)
   fprintf (stderr, "\n");
 }
 
+static void
+tve_init_libraries(void)
+{
+    av_register_all();
+    av_log_set_level(AV_LOG_ERROR);
+}
 
-int tve_open_video (const char *fname, int64_t second)
+int write_jpeg (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo)
+{ 
+  AVCodecContext         *pOCodecCtx; 
+  AVCodec                *pOCodec; 
+  uint8_t                *Buffer; 
+  int                     BufSiz; 
+  int                     BufSizActual; 
+  int                     ImgFmt = PIX_FMT_YUVJ420P;
+  FILE                   *JPEGFile; 
+  char                    JPEGFName[256]; 
+
+  BufSiz = avpicture_get_size (ImgFmt,pCodecCtx->width,pCodecCtx->height ); 
+
+  Buffer = (uint8_t *)malloc ( BufSiz ); 
+  if ( Buffer == NULL ) return ( 0 ); 
+  memset ( Buffer, 0, BufSiz ); 
+
+  pOCodecCtx = avcodec_alloc_context ( ); 
+  if ( !pOCodecCtx ) { 
+    free ( Buffer ); 
+    return ( 0 ); 
+  } 
+
+  pOCodecCtx->bit_rate      = pCodecCtx->bit_rate; 
+  pOCodecCtx->width         = pCodecCtx->width; 
+  pOCodecCtx->height        = pCodecCtx->height; 
+  pOCodecCtx->pix_fmt       = ImgFmt; 
+  pOCodecCtx->codec_id      = CODEC_ID_MJPEG; 
+  pOCodecCtx->codec_type    = AVMEDIA_TYPE_VIDEO; 
+  pOCodecCtx->time_base.num = pCodecCtx->time_base.num; 
+  pOCodecCtx->time_base.den = pCodecCtx->time_base.den; 
+
+  pOCodec = avcodec_find_encoder ( pOCodecCtx->codec_id ); 
+  if ( !pOCodec ) { 
+    free ( Buffer ); 
+    return ( 0 ); 
+  } 
+  if ( avcodec_open ( pOCodecCtx, pOCodec ) < 0 ) { 
+    free ( Buffer ); 
+    return ( 0 ); 
+  } 
+
+
+  pOCodecCtx->mb_lmin        = pOCodecCtx->lmin =  2 * FF_QP2LAMBDA; 
+  pOCodecCtx->mb_lmax        = pOCodecCtx->lmax =  2 * FF_QP2LAMBDA; 
+  pOCodecCtx->flags          = CODEC_FLAG_QSCALE; 
+  pOCodecCtx->global_quality = pOCodecCtx->qmin * FF_QP2LAMBDA; 
+
+  pFrame->pts     = 1; 
+  pFrame->quality = 100; 
+  BufSizActual = avcodec_encode_video( pOCodecCtx,Buffer,BufSiz,pFrame ); 
+
+  sprintf ( JPEGFName, "%06d.jpg", FrameNo ); 
+  JPEGFile = fopen ( JPEGFName, "wb" ); 
+  fwrite ( Buffer, 1, BufSizActual, JPEGFile ); 
+  fclose ( JPEGFile ); 
+
+  avcodec_close ( pOCodecCtx ); 
+  free ( Buffer ); 
+  return ( BufSizActual ); 
+}
+
+int tve_open_video (const char *fname, int second)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
@@ -73,7 +143,9 @@ int tve_open_video (const char *fname, int64_t second)
   }
   if ((format_ctx->duration > 0) && (second > (format_ctx->duration / AV_TIME_BASE))) 
   {
-    error("duration zero or second request over duration");    
+    char msg[255];
+    sprintf(msg,"duration zero or second request over duration %lld segundos", format_ctx->duration / AV_TIME_BASE);
+    error(msg);
     return -3;
   }
   video_stream = -1;
@@ -142,8 +214,10 @@ int tve_open_video (const char *fname, int64_t second)
     error("Seek on invalid time");
     return -4;
   }
+  int count = 0;
   while (!frame_end && av_read_frame(format_ctx, &packet_av) >= 0) 
   {  
+    count++;
     if (packet_av.stream_index == video_stream) 
     {
       avcodec_decode_video2(codec_ctx, frame_av, &frame_end, &packet_av); 
@@ -155,13 +229,15 @@ int tve_open_video (const char *fname, int64_t second)
       sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
                           codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
       sws_freeContext(image_ctx);
+  
+      if(write_jpeg(codec_ctx, frame_av, count) == 0)
+      {
+        error("Can't write jpeg file");
+      }
     }  
+    av_free_packet(&packet_av);
   }
+  av_free_packet(&packet_av);
   return 0;
 }
-
-
-
-
-
 
