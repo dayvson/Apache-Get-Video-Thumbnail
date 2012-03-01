@@ -65,7 +65,10 @@ static int module_handler(request_rec *r) {
 
    // If anything is unexpected,
    // Consider by default the module is enabled and the request was invalid
-	if (tve_open_video("/Users/tiagopadua/Movies/cartoons.avi") == 0)
+  fprintf(stderr, "args........... %s\n", r->args);
+  
+  tve_init_libraries();
+	if (tve_open_video("/Users/dayvson/Apache-Get-Video-Thumbnail/src/daisy.mp4", 25) == 0)
 		return DECLINED;
 	else
    		return HTTP_NOT_FOUND;

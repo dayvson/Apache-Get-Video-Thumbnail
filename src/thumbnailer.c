@@ -38,11 +38,10 @@ error (const char *msg)
   fprintf (stderr, "\n");
 }
 
-static void
+void
 tve_init_libraries(void)
 {
     av_register_all();
-    av_log_set_level(AV_LOG_ERROR);
 }
 
 int write_jpeg (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo)
