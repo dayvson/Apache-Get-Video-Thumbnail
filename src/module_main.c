@@ -28,52 +28,58 @@
  * SUCH DAMAGE.
  */
 
-#include "httpd.h"
-#include "http_config.h"
-#include "ap_config.h"
-#include "thumbnailer.h"
+#include "module.h"
+#include "log.h"
 
-// Just define the module, for references.
-// Go to the last lines to see its value
-module AP_MODULE_DECLARE_DATA videothumb_module;
+#define CONFIG_DEFAULT_ENABLED "enabled"
 
 static int module_handler(request_rec *r) {
-   // Get the module configuration
-   //orchid_config* o_cfg = ap_get_module_config(r->server->module_config, &orchid_module);
-
-//   LOG_ERROR("enabled........ %s\n", o_cfg->enabled);
-//   LOG_ERROR("password....... %s\n", o_cfg->password);
-//   LOG_ERROR("timeout........ %s\n", o_cfg->timeout);
-//   LOG_ERROR("validate_ip.... %s\n", o_cfg->validate_ip);
-
-//   LOG_ERROR("uri............ %s\n", r->uri);
-//   LOG_ERROR("unparsed_uri... %s\n", r->unparsed_uri);
-//   LOG_ERROR("args........... %s\n", r->args);
-//   LOG_ERROR("hostname....... %s\n", r->hostname);
-//   LOG_ERROR("ip............. %s\n", r->connection->remote_ip);
-
-	//return DECLINED;
-
-   // "DECLINED" means that the module will not change 
-   //  this request - and Apache must proceed normally
-   //if (req_result == ORCHID_SUCCESS) return DECLINED; 
-   //else if (req_result == ORCHID_FAIL) return HTTP_NOT_FOUND;
-   //else if (req_result == ORCHID_MONIT) return ORCHID_HTTP_MONIT;
-
-// Do not use fflush so often on a production server
-//   fflush(stderr);
-
-   // If anything is unexpected,
-   // Consider by default the module is enabled and the request was invalid
-	if (tve_open_video("/Users/tiagopadua/Movies/cartoons.avi") == 0)
-		return DECLINED;
-	else
-   		return HTTP_NOT_FOUND;
+  // if (tve_open_video("/Users/tiagopadua/Movies/cartoons.avi") == 0)
+  LOG_ERROR("request made: %s", r->args);
+    return DECLINED;
+  // else
+    // return HTTP_NOT_FOUND;
 }
 
 static void register_hooks (apr_pool_t *p) {
-   ap_hook_post_read_request(module_handler, NULL, NULL, APR_HOOK_FIRST);
+   ap_hook_handler(module_handler, NULL, NULL, APR_HOOK_LAST);
 }
+
+// Set up the configuration
+typedef struct
+{
+  char* enabled;
+} module_config;
+
+static void* create_config(apr_pool_t* p, server_rec* r)
+{
+  // Allocate memory for the config object
+  // Using 'apr_pool' we don't have to worry about DE-allocating memory - apache does it
+  module_config* newcfg = (module_config*)apr_pcalloc(p, sizeof(module_config));
+
+  // Set default values
+  newcfg->enabled = CONFIG_DEFAULT_ENABLED;
+
+  return (void*)newcfg;
+}
+
+static const char* config_set_enabled(cmd_parms* parms, void* mconfig, const char* arg)
+{
+  module_config* cfg = ap_get_module_config(parms->server->module_config, &videothumb_module);
+  cfg->enabled = (char*)arg;
+  return NULL;
+}
+
+static const command_rec config_array[] =
+{
+  AP_INIT_TAKE1(
+    "VideothumbEnabled",
+    config_set_enabled,
+    NULL,
+    RSRC_CONF,
+    "Orchid configuration key loaded: VideothumbEnabled"),
+  { NULL }
+};
 
 /************************************************************
  *  The name of this structure is important - it must match *
@@ -84,8 +90,8 @@ module AP_MODULE_DECLARE_DATA videothumb_module = {
       STANDARD20_MODULE_STUFF,
       NULL,
       NULL,
-      NULL, //orchid_create_config,
+      create_config,
       NULL,
-      NULL, //orchid_config_cmds,
+      config_array,
       register_hooks
 };

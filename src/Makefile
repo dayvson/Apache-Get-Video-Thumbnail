@@ -31,9 +31,8 @@ include ../defines.mk
 
 # Standard VARS, may be overwritten by external parameters
 CFLAGS = -I../include
-CLIBS = -lavcodec -lavformat -ljpeg
+CLIBS = -lavcodec -lswscale -lavutil -lavformat -ljpeg
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
-LIBS  = -lstdc++
 
 .PHONY : all
 all: apxs
@@ -48,10 +47,10 @@ clean:
 	rm -Rf $(BINNAME) $(NAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs
 
 apxs: 
-	apxs -c $(FLAGS) module_main.c thumbnailer.c -o $(BINNAME) $(LIBS) 
+	apxs -c $(FLAGS)  module_main.c -o $(BINNAME)
 
 test: objects
 	gcc $(CFLAGS) $(CLIBS) thumbnailer.o ../test/main.c -o $(NAME)
 
-objects:
+objects: thumbnailer.c
 	gcc -c thumbnailer.c -o thumbnailer.o $(CFLAGS)
