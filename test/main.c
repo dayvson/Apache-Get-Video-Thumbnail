@@ -1,12 +1,18 @@
+#include <stdio.h>
 #include "thumbnailer.h"
 
-int main(int argc, char*argv)
-{
-  av_register_all();
+void usage(const char* binName) {
+  printf("Usage:\r\n");
+  printf("  %s filename position(in seconds)\r\n\r\n", binName);
+}
 
-  if (tve_open_video("big.ogg", 10) == 0)
-    printf("Achou\r\n");
-  else
-    printf("NAO achou\r\n");
+int main(int argc, char*argv[])
+{
+  if (argc < 3) {
+    usage(argv[0]);
+    return -1;
+  }
+	tve_init_libraries();
+  tve_open_video(argv[1], atoi(argv[2]));
   return 0;
 }

@@ -30,15 +30,39 @@
 
 #include "module.h"
 #include "log.h"
+#include "thumbnailer.h"
 
 #define CONFIG_DEFAULT_ENABLED "enabled"
 
 static int module_handler(request_rec *r) {
-  // if (tve_open_video("/Users/tiagopadua/Movies/cartoons.avi") == 0)
-  LOG_ERROR("request made: %s", r->args);
-    return DECLINED;
+  if (r->args) {
+    LOG_ERROR("request made: %s", r->args);
+    tve_init_libraries();
+    LOG_ERROR("blabalbal");
+    ImageBuffer jpeg = tve_open_video(r->args, 5);
+    
+    if (jpeg.buffer) {
+      LOG_ERROR(">> Retornando JPEG");
+      ap_set_content_type(r, "image/jpeg");
+      LOG_ERROR(">>> mbmabkfmdakba");
+      ap_rwrite(jpeg.buffer, jpeg.size, r);
+      // ap_rputs(jpeg, jpeg.size, r);
+      LOG_ERROR("depois do rputs");
+      } else LOG_ERROR("JPEG INVALIDO!!!!!!!!!!!!!!!!");
+  } else {
+    LOG_ERROR("Querystring null");
+  }
+  return OK;
   // else
     // return HTTP_NOT_FOUND;
+  /*  fprintf(stderr, "args........... %s\n", r->args);
+
+    tve_init_libraries();
+  	if (tve_open_video("/Users/dayvson/Apache-Get-Video-Thumbnail/src/daisy.mp4", 25) == 0)
+  		return DECLINED;
+  	else
+     		return HTTP_NOT_FOUND;
+  */
 }
 
 static void register_hooks (apr_pool_t *p) {
@@ -59,8 +83,6 @@ static void* create_config(apr_pool_t* p, server_rec* r)
 
   // Set default values
   newcfg->enabled = CONFIG_DEFAULT_ENABLED;
-
-  return (void*)newcfg;
 }
 
 static const char* config_set_enabled(cmd_parms* parms, void* mconfig, const char* arg)

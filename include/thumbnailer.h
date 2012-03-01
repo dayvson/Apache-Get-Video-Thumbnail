@@ -33,6 +33,10 @@
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
-#include <jpeglib.h>
 
-int tve_open_video (const char *fname, int64_t second);
+typedef struct _imgBuf {
+  uint8_t *buffer;
+  int size;
+} ImageBuffer;
+
+ImageBuffer tve_open_video (const char *fname, int second);

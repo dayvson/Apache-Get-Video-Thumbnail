@@ -31,7 +31,7 @@ include ../defines.mk
 
 # Standard VARS, may be overwritten by external parameters
 CFLAGS = -I../include
-CLIBS = -lavcodec -lswscale -lavutil -lavformat -ljpeg
+LIBS = -lavcodec -lswscale -lavutil -lavformat -ljpeg
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -I../include
 
 .PHONY : all
@@ -44,13 +44,13 @@ install: apxs
 
 .PHONY : clean
 clean:
-	rm -Rf $(BINNAME) $(NAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs
+	rm -Rf $(BINNAME) $(NAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs *.jpg
 
 apxs: 
-	apxs -c $(FLAGS)  module_main.c -o $(BINNAME)
+	apxs -c $(FLAGS) module_main.c thumbnailer.c -o $(BINNAME) $(LIBS)
 
 test: objects
-	gcc $(CFLAGS) $(CLIBS) thumbnailer.o ../test/main.c -o $(NAME)
+	gcc $(CFLAGS) $(LIBS) thumbnailer.o ../test/main.c -o $(NAME)
 
 objects: thumbnailer.c
 	gcc -c thumbnailer.c -o thumbnailer.o $(CFLAGS)
