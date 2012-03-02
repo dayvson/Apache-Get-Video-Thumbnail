@@ -40,7 +40,7 @@ static int module_handler(request_rec *r) {
     tve_init_libraries();
     LOG_ERROR("blabalbal");
     ImageBuffer jpeg = tve_open_video(r->args, 5);
-    
+
     if (jpeg.buffer) {
       LOG_ERROR(">> Retornando JPEG");
       ap_set_content_type(r, "image/jpeg");

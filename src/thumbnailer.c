@@ -32,8 +32,7 @@
 #include "stdio.h"
 #include "log.h"
 
-void
-tve_init_libraries(void)
+void tve_init_libraries(void)
 {
     av_register_all();
 }
@@ -61,12 +60,12 @@ ImageBuffer write_jpeg (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo)
   memset ( Buffer, 0, BufSiz ); 
 
   LOG_ERROR("allocced memory");
-
-  pOCodecCtx = avcodec_alloc_context ( ); 
+  pOCodecCtx = avcodec_alloc_context3( NULL ); 
   if ( !pOCodecCtx ) { 
     free ( Buffer ); 
     return ( f ); 
   } 
+  LOG_ERROR("uhul");
 
   pOCodecCtx->bit_rate      = pCodecCtx->bit_rate; 
   pOCodecCtx->width         = pCodecCtx->width; 
@@ -81,11 +80,14 @@ ImageBuffer write_jpeg (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo)
   if ( !pOCodec ) { 
     free ( Buffer ); 
     return ( f ); 
-  } 
-  if ( avcodec_open ( pOCodecCtx, pOCodec ) < 0 ) { 
+  }
+  LOG_ERROR("a");
+
+  if (avcodec_open2 ( pOCodecCtx, pOCodec, NULL ) < 0 ) { 
     free ( Buffer ); 
     return ( f ); 
   } 
+  LOG_ERROR("b");
 
 
   pOCodecCtx->mb_lmin        = pOCodecCtx->lmin =  2 * FF_QP2LAMBDA; 
@@ -96,6 +98,7 @@ ImageBuffer write_jpeg (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo)
   pFrame->pts     = 1; 
   pFrame->quality = 100; 
   BufSizActual = avcodec_encode_video( pOCodecCtx,Buffer,BufSiz,pFrame ); 
+  LOG_ERROR("c");
 
   //sprintf ( JPEGFName, "%06d.jpg", FrameNo ); 
   //JPEGFile = fopen ( JPEGFName, "wb" ); 
@@ -137,7 +140,8 @@ ImageBuffer tve_open_video (const char *fname, int second)
   int video_stream = 0;
   int frame_end = 0;
 
-  LOG_ERROR("0");
+  LOG_ERROR("0 %s", fname);
+  format_ctx = avformat_alloc_context();
   if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
   {
     LOG_ERROR("avformat_open_input() has failed");
@@ -153,7 +157,7 @@ ImageBuffer tve_open_video (const char *fname, int second)
   if ((format_ctx->duration > 0) && (second > (format_ctx->duration / AV_TIME_BASE)))
   {
     char msg[255];
-    sprintf(msg,"duration zero or second request over duration %lld segundos", format_ctx->duration / AV_TIME_BASE);
+    sprintf(msg,"duration zero or second request over duration %l segundos", format_ctx->duration / AV_TIME_BASE);
     LOG_ERROR(msg);
     return memJpeg;
   }
