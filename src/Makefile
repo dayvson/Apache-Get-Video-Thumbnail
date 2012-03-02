@@ -47,10 +47,7 @@ clean:
 	rm -Rf $(BINNAME) $(NAME) *.o *~ *.la *.lo *.slo *.so *.loT .libs *.jpg
 
 apxs: 
-	apxs -c $(FLAGS) module_main.c thumbnailer.c -o $(BINNAME) $(LIBS)
+	apxs -c $(FLAGS) module_main.c querystring.c thumbnailer.c -o $(BINNAME) $(LIBS)
 
-test: objects
-	gcc $(CFLAGS) $(LIBS) thumbnailer.o ../test/main.c -o $(NAME)
-
-objects: thumbnailer.c
-	gcc -c thumbnailer.c -o thumbnailer.o $(CFLAGS)
+test:
+	gcc $(CFLAGS) $(LIBS) thumbnailer.c querystring.c ../test/main.c -o $(NAME)

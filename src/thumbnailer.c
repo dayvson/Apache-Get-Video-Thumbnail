@@ -156,9 +156,7 @@ ImageBuffer tve_open_video (const char *fname, int second)
   LOG_ERROR("2");
   if ((format_ctx->duration > 0) && (second > (format_ctx->duration / AV_TIME_BASE)))
   {
-    char msg[255];
-    sprintf(msg,"duration zero or second request over duration %l segundos", format_ctx->duration / AV_TIME_BASE);
-    LOG_ERROR(msg);
+    LOG_ERROR("duration zero or second request over duration %llu segundos", format_ctx->duration / AV_TIME_BASE);
     return memJpeg;
   }
   LOG_ERROR("3");
