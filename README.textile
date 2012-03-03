@@ -17,11 +17,13 @@ All of these libraries was commonly distributed with "FFmpeg":http://ffmpeg.org 
 
 
 h1(#howtoconfigure). Configuration
+
 To enable this module after installation edit httpd.conf file and in module section add  
 LoadModule videothumb_module [module_path]/mod_videothumb.so
 *[module_path] => Apache Directory modules in your architecture *
 
 h1(#howtouse). How to use
+
 After enable this module you can access using these urls
 This module can receive four parameters
 video  => Path from video. ex: /home/dayvson/bigbunny.ogg
@@ -31,6 +33,7 @@ height => Optional parameter to resize height video frame
 *If you don't use width or height parameters, the frame dimension will be equal to the video*
 
 h1(#sample). Sample usage :
+
 http://your_host/?video=bigbunny.ogg&second=30
 http://your_host/?video=bigbunny.ogg&second=30&width=640
 http://your_host/?video=bigbunny.ogg&second=30&width=640&height=360
