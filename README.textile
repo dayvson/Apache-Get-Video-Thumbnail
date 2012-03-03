@@ -20,7 +20,7 @@ h1(#howtoconfigure). Configuration
 
 To enable this module after installation edit httpd.conf file and in module section add  
 LoadModule videothumb_module [module_path]/mod_videothumb.so
-*[module_path] => Apache Directory modules in your architecture *
+[module_path] => Apache Directory modules in your architecture *
 
 h1(#howtouse). How to use
 
