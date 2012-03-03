@@ -27,13 +27,27 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-include ./defines.mk
+include defines.mk
 
-all:
-	make -C src
+# Standard VARS, may be overwritten by external parameters
+CFLAGS = -Iinclude
+LIBS = -lavcodec -lswscale -lavutil -lavformat
+FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -Iinclude
+
+.PHONY : all
+all: apxs
+
+.PHONY : install
+install: apxs
+	cp -f .libs/$(LIBNAME) $(APACHE_MODULES_DIR)
+	echo "Don't forget to edit httpd.conf"
+
+.PHONY : clean
+clean:
+	rm -Rf $(BINNAME) $(NAME) src/*.o src/*~ src/*.la src/*.lo src/*.slo src/*.so src/*.loT src/.libs src/*.jpg
+
+apxs: 
+	apxs -c $(FLAGS) src/module_main.c src/querystring.c src/thumbnailer.c -o $(BINNAME) $(LIBS)
 
 test:
-	make -C src test
-
-clean:
-	make -C src clean
+	gcc $(CFLAGS) $(LIBS) src/thumbnailer.c src/querystring.c /test/main.c -o $(NAME)
