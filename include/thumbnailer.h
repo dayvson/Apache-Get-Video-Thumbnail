@@ -34,9 +34,23 @@
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 
+typedef struct _reqInfo {
+  char* file;
+  int second;
+  int width;
+  int height;
+}RequestInfo;
+
+typedef struct _imgSize {
+  char* file;
+  int second;
+  int width;
+  int height;
+}ImageSize;
+
 typedef struct _imgBuf {
   uint8_t *buffer;
   int size;
 } ImageBuffer;
 
-ImageBuffer tve_open_video (const char *fname, int second);
+ImageBuffer tve_open_video (const char *fname, int second, int width, int height);
