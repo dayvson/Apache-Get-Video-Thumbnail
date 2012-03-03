@@ -49,5 +49,6 @@ clean:
 apxs: 
 	apxs -c $(FLAGS) src/module_main.c src/querystring.c src/thumbnailer.c -o $(BINNAME) $(LIBS)
 
+.PHONY : test
 test:
-	gcc $(CFLAGS) $(LIBS) src/thumbnailer.c src/querystring.c /test/main.c -o $(NAME)
+	gcc $(CFLAGS) $(LIBS) src/thumbnailer.c src/querystring.c test/main.c -o $(NAME)
