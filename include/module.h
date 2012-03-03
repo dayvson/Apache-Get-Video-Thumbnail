@@ -33,6 +33,9 @@
 
 #include "httpd.h"
 #include "http_config.h"
+#include "log.h"
+#include "thumbnailer.h"
+#include "querystring.h"
 
 // Just define the module, for references.
 module AP_MODULE_DECLARE_DATA videothumb_module;
