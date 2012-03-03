@@ -7,4 +7,6 @@
 *.loT 
 .libs
 *.out
-src/videothumb
+*.jpg
+videothumb
+.DS_Store
