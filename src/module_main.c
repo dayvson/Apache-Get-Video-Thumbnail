@@ -32,7 +32,7 @@
 
 #define CONFIG_DEFAULT_ENABLED "enabled"
 
-static int module_handler(request_rec *r) {
+static int videothumb_handler(request_rec *r) {
   if (r->args) {
     LOG_ERROR("request made: %s", r->args);
     tve_init_libraries();
@@ -69,7 +69,7 @@ static int module_handler(request_rec *r) {
 }
 
 static void register_hooks (apr_pool_t *p) {
-   ap_hook_handler(module_handler, NULL, NULL, APR_HOOK_LAST);
+   ap_hook_handler(videothumb_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
 // Set up the configuration
@@ -102,7 +102,7 @@ static const command_rec config_array[] =
     config_set_enabled,
     NULL,
     RSRC_CONF,
-    "Orchid configuration key loaded: VideothumbEnabled"),
+    "Videothumb configuration key loaded: VideothumbEnabled"),
   { NULL }
 };
 
