@@ -179,13 +179,14 @@ jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_hei
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_compress(&cinfo);
     jpeg_mem_dest (&cinfo,&outbuffer,&outlen );
-
+    LOG_ERROR("JPEG MEM DESTINATION");
     cinfo.image_width = out_width;
     cinfo.image_height = out_height;
     cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
 
     jpeg_set_defaults(&cinfo);
+        LOG_ERROR("JPEG SET DEFAULTS");
     /* Important: Header info must be set AFTER jpeg_set_defaults() */
     cinfo.write_JFIF_header = TRUE;
     cinfo.JFIF_major_version = 1;
@@ -203,24 +204,27 @@ jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_hei
     jpeg_set_quality(&cinfo, imageConf.quality, imageConf.baseline);
     cinfo.optimize_coding = imageConf.optimize;
     cinfo.smoothing_factor = imageConf.smooth;
-
+        LOG_ERROR("JPEG SET QUALITY");
     jpeg_simple_progression(&cinfo);
     jpeg_start_compress(&cinfo, TRUE);
-
+        LOG_ERROR("JPEG START COMPRESS");
     row_stride = out_width * 3;
     while (cinfo.next_scanline < cinfo.image_height) {
         row_pointer[0] = &buffer[cinfo.next_scanline * row_stride];
         (void)jpeg_write_scanlines(&cinfo, row_pointer,1);
     }
+    LOG_ERROR("JPEG AFTER SCANLINES");
     
     
-    
-    struct jpeg_destination_mgr *dest = cinfo.dest;
-    f.buffer = outbuffer;
-    f.size = outlen;
+
+    my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo.dest;
+    LOG_ERROR("JPEG GET DEST");
+    f.buffer = dest.buffer;
+    f.size = dest.bufsize;
+    LOG_ERROR("JPEG SET DEST");
     jpeg_finish_compress(&cinfo);
     jpeg_destroy_compress(&cinfo);
-
+    LOG_ERROR("JPEG FINISH COMPRESS");
     return f;
 }
 
