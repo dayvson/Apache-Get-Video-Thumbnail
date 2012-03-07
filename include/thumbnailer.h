@@ -33,6 +33,15 @@
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
+#include <jpeglib.h>
+
+typedef struct _imageConf {
+  int quality;
+  int dpi;
+  int optimize;
+  int smooth;
+  int baseline;
+} ImageConf;
 
 typedef struct _reqInfo {
   char* file;

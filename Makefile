@@ -31,7 +31,7 @@ include defines.mk
 
 # Standard VARS, may be overwritten by external parameters
 CFLAGS = -Iinclude
-LIBS = -lavcodec -lswscale -lavutil -lavformat
+LIBS = -lavcodec -lswscale -lavutil -lavformat -ljpeg
 FLAGS = -Wc,-DMAJOR=$(MAJOR) -Wc,-DMINOR=$(MINOR) -Wc,-DPATCH=$(PATCH) -Iinclude
 
 .PHONY : all

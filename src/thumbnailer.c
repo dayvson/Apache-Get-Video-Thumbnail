@@ -75,6 +75,156 @@ ImageSize get_new_frame_size(int input_width, int input_height, int output_width
 
 }
 
+
+#define OUTPUT_BUF_SIZE 4096	/* choose an efficiently fwrite’able size */
+/* Expanded data destination object for memory output */
+typedef struct {
+  struct jpeg_destination_mgr pub; /* public fields */
+  unsigned char ** outbuffer;	/* target buffer */
+  unsigned long * outsize;
+  unsigned char * newbuffer;	/* newly allocated buffer */
+  JOCTET * buffer;	 /* start of buffer */
+  size_t bufsize;
+} my_mem_destination_mgr;
+
+typedef my_mem_destination_mgr * my_mem_dest_ptr;
+
+void
+init_mem_destination (j_compress_ptr cinfo)
+{
+/* no work necessary here */
+}
+boolean
+empty_mem_output_buffer (j_compress_ptr cinfo)
+{
+  size_t nextsize;
+  JOCTET * nextbuffer;
+  my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo->dest;
+  /* Try to allocate new buffer with double size */
+  nextsize = dest->bufsize * 2;
+  nextbuffer = (JOCTET *)malloc(nextsize);
+  if (nextbuffer == NULL)
+    return;
+  memcpy(nextbuffer, dest->buffer, dest->bufsize);
+  if (dest->newbuffer != NULL)
+    free(dest->newbuffer);
+  dest->newbuffer = nextbuffer;
+  dest->pub.next_output_byte = nextbuffer + dest->bufsize;
+  dest->pub.free_in_buffer = dest->bufsize;
+  dest->buffer = nextbuffer;
+  dest->bufsize = nextsize;
+  return TRUE;
+}
+void
+term_mem_destination (j_compress_ptr cinfo)
+{
+  my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo->dest;
+  *dest->outbuffer = dest->buffer;
+  *dest->outsize = dest->bufsize - dest->pub.free_in_buffer;
+}
+
+void
+jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long * outsize)
+{
+  my_mem_dest_ptr dest;
+  if (outbuffer == NULL || outsize == NULL)	/* sanity check */
+    return;
+/* The destination object is made permanent so that multiple JPEG images
+* can be written to the same buffer without re-executing jpeg_mem_dest.
+*/
+  if (cinfo->dest == NULL) {	/* first time for this JPEG object? */
+      cinfo->dest = (struct jpeg_destination_mgr *)
+      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
+      sizeof(my_mem_destination_mgr));
+  }
+  dest = (my_mem_dest_ptr) cinfo->dest;
+  dest->pub.init_destination = init_mem_destination;
+  dest->pub.empty_output_buffer = empty_mem_output_buffer;
+  dest->pub.term_destination = term_mem_destination;
+  dest->outbuffer = outbuffer;
+  dest->outsize = outsize;
+  dest->newbuffer = NULL;
+  if (*outbuffer == NULL || *outsize == 0) {
+    /* Allocate initial buffer */
+    dest->newbuffer = *outbuffer = (unsigned char*)malloc(OUTPUT_BUF_SIZE);
+    if (dest->newbuffer == NULL)
+      return;
+    *outsize = OUTPUT_BUF_SIZE;
+  }
+  dest->pub.next_output_byte = dest->buffer = *outbuffer;
+  dest->pub.free_in_buffer = dest->bufsize = *outsize;
+}
+
+
+
+ImageBuffer
+jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
+{
+  ImageBuffer             f;
+  f.buffer              = NULL;
+  f.size                = 0;  
+
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    JSAMPROW row_pointer[1];
+    int row_stride;
+    //int image_d_width = in_width;
+    //int image_d_height = in_height;
+    unsigned long outlen;
+    unsigned char *outbuffer;
+    
+
+    if ( !buffer ) return f;
+
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    jpeg_mem_dest (&cinfo,&outbuffer,&outlen );
+
+    cinfo.image_width = out_width;
+    cinfo.image_height = out_height;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+
+    jpeg_set_defaults(&cinfo);
+    /* Important: Header info must be set AFTER jpeg_set_defaults() */
+    cinfo.write_JFIF_header = TRUE;
+    cinfo.JFIF_major_version = 1;
+    cinfo.JFIF_minor_version = 2;
+    cinfo.density_unit = 1; /* 0=unknown, 1=dpi, 2=dpcm */
+    /* Image DPI is determined by Y_density, so we leave that at
+       jpeg_dpi if possible and crunch X_density instead (PAR > 1) */
+
+    
+
+    //cinfo.X_density = imageConf.dpi * out_width / image_d_width;
+    //cinfo.Y_density = imageConf.dpi * out_height / image_d_height;
+    cinfo.write_Adobe_marker = TRUE;
+
+    jpeg_set_quality(&cinfo, imageConf.quality, imageConf.baseline);
+    cinfo.optimize_coding = imageConf.optimize;
+    cinfo.smoothing_factor = imageConf.smooth;
+
+    jpeg_simple_progression(&cinfo);
+    jpeg_start_compress(&cinfo, TRUE);
+
+    row_stride = out_width * 3;
+    while (cinfo.next_scanline < cinfo.image_height) {
+        row_pointer[0] = &buffer[cinfo.next_scanline * row_stride];
+        (void)jpeg_write_scanlines(&cinfo, row_pointer,1);
+    }
+    
+    
+    
+    struct jpeg_destination_mgr *dest = cinfo.dest;
+    f.buffer = outbuffer;
+    f.size = outlen;
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+
+    return f;
+}
+
+
 ImageBuffer write_jpeg (AVCodecContext *codec_ctx, AVFrame *frame_av, int width, int height)
 { 
   AVCodecContext         *p_codec_ctx; 
@@ -86,60 +236,32 @@ ImageBuffer write_jpeg (AVCodecContext *codec_ctx, AVFrame *frame_av, int width,
   ImageBuffer             f;
   f.buffer              = NULL;
   f.size                = 0;  
-  //Resize frame
-  ImageSize imageSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
-  struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
-          ImgFmt, imageSize.width, imageSize.height, ImgFmt, SWS_BICUBIC, NULL, NULL, NULL);
-  
-  sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
-                      codec_ctx->height, frame_av->data, frame_av->linesize);
-  sws_freeContext(image_ctx);
-  
+   ImageSize imageSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
+  AVFrame *frameRGB_av = avcodec_alloc_frame();
+
   //Alloc frame
-  BufSiz = avpicture_get_size (ImgFmt, imageSize.width, imageSize.height );
+  BufSiz = avpicture_get_size (PIX_FMT_RGB24, imageSize.width, imageSize.height );
   Buffer = (uint8_t *)malloc ( BufSiz ); 
   if ( Buffer == NULL ) return ( f ); 
   memset ( Buffer, 0, BufSiz ); 
 
-
-  p_codec_ctx = avcodec_alloc_context3( NULL ); 
-  if ( !p_codec_ctx ) { 
-    free ( Buffer ); 
-    return ( f ); 
-  } 
-  LOG_ERROR("uhul");
+  avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize.width, imageSize.height);
+  //Resize frame
+ 
+  struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
+          ImgFmt, imageSize.width, imageSize.height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
   
-  p_codec_ctx->bit_rate      = codec_ctx->bit_rate; 
-  p_codec_ctx->width         = imageSize.width;
-  p_codec_ctx->height        = imageSize.height;
-
-  p_codec_ctx->pix_fmt       = ImgFmt; 
-  p_codec_ctx->codec_id      = CODEC_ID_MJPEG; 
-  p_codec_ctx->codec_type    = AVMEDIA_TYPE_VIDEO; 
-  p_codec_ctx->time_base.num = codec_ctx->time_base.num; 
-  p_codec_ctx->time_base.den = codec_ctx->time_base.den; 
-
-  pOCodec = avcodec_find_encoder ( p_codec_ctx->codec_id ); 
-  if ( !pOCodec ) { 
-    free ( Buffer ); 
-    return ( f ); 
-  }
-  if (avcodec_open2 ( p_codec_ctx, pOCodec, NULL ) < 0 ) { 
-    free ( Buffer ); 
-    return ( f ); 
-  } 
-  p_codec_ctx->mb_lmin        = p_codec_ctx->lmin =  2 * FF_QP2LAMBDA; 
-  p_codec_ctx->mb_lmax        = p_codec_ctx->lmax =  2 * FF_QP2LAMBDA; 
-  p_codec_ctx->flags          = CODEC_FLAG_QSCALE; 
-  p_codec_ctx->global_quality = p_codec_ctx->qmin * FF_QP2LAMBDA; 
-  frame_av->pts     = 1; 
-  frame_av->quality = 100; 
-  BufSizActual = avcodec_encode_video( p_codec_ctx,Buffer,BufSiz,frame_av ); 
-
-  avcodec_close ( p_codec_ctx ); 
-  f.buffer = Buffer;
-  f.size = BufSizActual;
-  return f; 
+  sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
+                      codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
+  sws_freeContext(image_ctx);
+  ImageConf cf;
+  cf.quality = 100;
+  cf.dpi = 100;
+  cf.smooth = 1;
+  cf.baseline = 1;
+  
+  ImageBuffer jpeg = jpeg_compress(cf, frameRGB_av->data[0], imageSize.width, imageSize.height);
+  return jpeg; 
 }
 
 ImageBuffer tve_open_video (const char *fname, int second, int width, int height)

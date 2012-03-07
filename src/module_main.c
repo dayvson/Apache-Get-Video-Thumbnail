@@ -36,7 +36,7 @@ static int videothumb_handler(request_rec *r) {
   if (r->args) {
     LOG_ERROR("request made: %s", r->args);
     tve_init_libraries();
-    LOG_ERROR("blabalbal");
+
     RequestInfo requestInfo;
     void* ctx;
     parseQueryString(&ctx, r->args);
