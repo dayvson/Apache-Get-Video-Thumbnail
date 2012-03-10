@@ -62,4 +62,12 @@ typedef struct _imgBuf {
   int size;
 } ImageBuffer;
 
+typedef struct {
+  struct jpeg_destination_mgr pub;
+  unsigned char ** outbuffer;
+  unsigned long * outsize;
+  unsigned char * newbuffer;
+  JOCTET * buffer;
+  size_t bufsize;
+} my_mem_destination_mgr;
 ImageBuffer tve_open_video (const char *fname, int second, int width, int height);

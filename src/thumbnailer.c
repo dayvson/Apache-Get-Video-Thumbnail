@@ -32,12 +32,18 @@
 #include "stdio.h"
 #include "log.h"
 
-void tve_init_libraries(void)
+#define OUTPUT_BUF_SIZE 4096
+typedef my_mem_destination_mgr * my_mem_dest_ptr;
+
+void 
+tve_init_libraries(void)
 {
   av_register_all();
 }
 
-ImageSize get_new_frame_size(int input_width, int input_height, int output_width, int output_height) {
+ImageSize 
+get_new_frame_size(int input_width, int input_height, int output_width, int output_height) 
+{
   float scale           = 0.0;
   float scale_x         = 0.0;
   float scale_y         = 0.0;
@@ -45,13 +51,16 @@ ImageSize get_new_frame_size(int input_width, int input_height, int output_width
   float scale_sws       = 0.0;
   int sws_width         = 0;
   int sws_height        = 0;
-  if (output_width == 0) {
-      output_width = input_width;
-      output_height = input_height;
-  } else if (output_width == 0) {
-      output_width = output_height * input_width / input_height;
-  }
   
+  if (output_width == 0) 
+  {
+      output_width = input_width;
+  } 
+  if (output_height == 0) 
+  {
+      output_height = input_height;
+  }
+
   scale     = (float) input_width / input_height;
   scale_out = (float) output_width / output_height;
   sws_width = output_width;
@@ -60,14 +69,16 @@ ImageSize get_new_frame_size(int input_width, int input_height, int output_width
   {
     scale_x = (float) output_width / input_width;
     scale_y = (float) output_height / input_height;
-    if (scale_x > scale_y){
+    if (scale_x > scale_y)
+    {
       scale_sws = scale_x;
     } else {
       scale_sws = scale_y;
     } 
-    sws_width = input_width * scale_sws + 0.5;
-    sws_height = input_height * scale_sws + 0.5;
+    sws_width = output_width * scale_sws + 0.5;
+    sws_height = output_height * scale_sws + 0.5;
   }
+  
   ImageSize imageSize;
   imageSize.width = sws_width;
   imageSize.height = sws_height;
@@ -75,39 +86,26 @@ ImageSize get_new_frame_size(int input_width, int input_height, int output_width
 
 }
 
-
-#define OUTPUT_BUF_SIZE 4096	/* choose an efficiently fwrite’able size */
-/* Expanded data destination object for memory output */
-typedef struct {
-  struct jpeg_destination_mgr pub; /* public fields */
-  unsigned char ** outbuffer;	/* target buffer */
-  unsigned long * outsize;
-  unsigned char * newbuffer;	/* newly allocated buffer */
-  JOCTET * buffer;	 /* start of buffer */
-  size_t bufsize;
-} my_mem_destination_mgr;
-
-typedef my_mem_destination_mgr * my_mem_dest_ptr;
-
 void
-init_mem_destination (j_compress_ptr cinfo)
-{
-/* no work necessary here */
-}
+init_mem_destination (j_compress_ptr cinfo){ }
+
 boolean
 empty_mem_output_buffer (j_compress_ptr cinfo)
 {
   size_t nextsize;
   JOCTET * nextbuffer;
   my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo->dest;
-  /* Try to allocate new buffer with double size */
   nextsize = dest->bufsize * 2;
   nextbuffer = (JOCTET *)malloc(nextsize);
   if (nextbuffer == NULL)
+  {
     return;
+  } 
   memcpy(nextbuffer, dest->buffer, dest->bufsize);
-  if (dest->newbuffer != NULL)
+  if (dest->newbuffer != NULL) 
+  {
     free(dest->newbuffer);
+  }
   dest->newbuffer = nextbuffer;
   dest->pub.next_output_byte = nextbuffer + dest->bufsize;
   dest->pub.free_in_buffer = dest->bufsize;
@@ -127,12 +125,9 @@ void
 jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long * outsize)
 {
   my_mem_dest_ptr dest;
-  if (outbuffer == NULL || outsize == NULL)	/* sanity check */
+  if (outbuffer == NULL || outsize == NULL)
     return;
-/* The destination object is made permanent so that multiple JPEG images
-* can be written to the same buffer without re-executing jpeg_mem_dest.
-*/
-  if (cinfo->dest == NULL) {	/* first time for this JPEG object? */
+  if (cinfo->dest == NULL) {	
       cinfo->dest = (struct jpeg_destination_mgr *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
       sizeof(my_mem_destination_mgr));
@@ -144,11 +139,13 @@ jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long *
   dest->outbuffer = outbuffer;
   dest->outsize = outsize;
   dest->newbuffer = NULL;
-  if (*outbuffer == NULL || *outsize == 0) {
-    /* Allocate initial buffer */
+  if (*outbuffer == NULL || *outsize == 0) 
+  {
     dest->newbuffer = *outbuffer = (unsigned char*)malloc(OUTPUT_BUF_SIZE);
     if (dest->newbuffer == NULL)
+    {
       return;
+    }
     *outsize = OUTPUT_BUF_SIZE;
   }
   dest->pub.next_output_byte = dest->buffer = *outbuffer;
@@ -160,71 +157,55 @@ jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long *
 ImageBuffer
 jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
 {
-  ImageBuffer             f;
-  f.buffer              = NULL;
-  f.size                = 0;  
-
+    ImageBuffer             f;
+    f.buffer              = NULL;
+    f.size                = 0;
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
     JSAMPROW row_pointer[1];
     int row_stride;
-    //int image_d_width = in_width;
-    //int image_d_height = in_height;
-    unsigned long outlen;
-    unsigned char *outbuffer;
-    
-
-    if ( !buffer ) return f;
+    unsigned long outlen = OUTPUT_BUF_SIZE;
+    unsigned char *outbuffer = malloc(outlen);
+    if ( !buffer )
+    {
+      return f;
+    } 
 
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_compress(&cinfo);
-    jpeg_mem_dest (&cinfo,&outbuffer,&outlen );
-    LOG_ERROR("JPEG MEM DESTINATION");
+    jpeg_mem_dest (&cinfo, &outbuffer, &outlen);
+    
     cinfo.image_width = out_width;
     cinfo.image_height = out_height;
     cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
 
     jpeg_set_defaults(&cinfo);
-        LOG_ERROR("JPEG SET DEFAULTS");
-    /* Important: Header info must be set AFTER jpeg_set_defaults() */
     cinfo.write_JFIF_header = TRUE;
     cinfo.JFIF_major_version = 1;
     cinfo.JFIF_minor_version = 2;
-    cinfo.density_unit = 1; /* 0=unknown, 1=dpi, 2=dpcm */
-    /* Image DPI is determined by Y_density, so we leave that at
-       jpeg_dpi if possible and crunch X_density instead (PAR > 1) */
-
-    
-
-    //cinfo.X_density = imageConf.dpi * out_width / image_d_width;
-    //cinfo.Y_density = imageConf.dpi * out_height / image_d_height;
+    cinfo.density_unit = 1;
     cinfo.write_Adobe_marker = TRUE;
 
     jpeg_set_quality(&cinfo, imageConf.quality, imageConf.baseline);
     cinfo.optimize_coding = imageConf.optimize;
     cinfo.smoothing_factor = imageConf.smooth;
-        LOG_ERROR("JPEG SET QUALITY");
+
     jpeg_simple_progression(&cinfo);
     jpeg_start_compress(&cinfo, TRUE);
-        LOG_ERROR("JPEG START COMPRESS");
+
     row_stride = out_width * 3;
-    while (cinfo.next_scanline < cinfo.image_height) {
+    while (cinfo.next_scanline < cinfo.image_height) 
+    {
         row_pointer[0] = &buffer[cinfo.next_scanline * row_stride];
         (void)jpeg_write_scanlines(&cinfo, row_pointer,1);
     }
-    LOG_ERROR("JPEG AFTER SCANLINES");
-    
-    
 
     my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo.dest;
-    LOG_ERROR("JPEG GET DEST");
-    f.buffer = dest.buffer;
-    f.size = dest.bufsize;
-    LOG_ERROR("JPEG SET DEST");
     jpeg_finish_compress(&cinfo);
+    f.buffer = outbuffer;
+    f.size = outlen;
     jpeg_destroy_compress(&cinfo);
-    LOG_ERROR("JPEG FINISH COMPRESS");
     return f;
 }
 
@@ -240,27 +221,29 @@ ImageBuffer write_jpeg (AVCodecContext *codec_ctx, AVFrame *frame_av, int width,
   ImageBuffer             f;
   f.buffer              = NULL;
   f.size                = 0;  
-   ImageSize imageSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
-  AVFrame *frameRGB_av = avcodec_alloc_frame();
+  ImageSize imageSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
 
   //Alloc frame
+  AVFrame *frameRGB_av = avcodec_alloc_frame();
   BufSiz = avpicture_get_size (PIX_FMT_RGB24, imageSize.width, imageSize.height );
   Buffer = (uint8_t *)malloc ( BufSiz ); 
-  if ( Buffer == NULL ) return ( f ); 
+  if ( Buffer == NULL )
+  {
+      return ( f ); 
+  } 
   memset ( Buffer, 0, BufSiz ); 
-
   avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize.width, imageSize.height);
   //Resize frame
- 
   struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
           ImgFmt, imageSize.width, imageSize.height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
   
   sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
                       codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
   sws_freeContext(image_ctx);
+
   ImageConf cf;
   cf.quality = 100;
-  cf.dpi = 100;
+  cf.dpi = 72;
   cf.smooth = 1;
   cf.baseline = 1;
   
@@ -349,6 +332,5 @@ ImageBuffer tve_open_video (const char *fname, int second, int width, int height
     av_free_packet(&packet_av);
   }
   av_free_packet(&packet_av);
-
   return memJpeg;
 }
