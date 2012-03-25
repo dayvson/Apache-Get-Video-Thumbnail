@@ -28,49 +28,12 @@
  * SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/opt.h>
-#include <libswscale/swscale.h>
-#include <jpeglib.h>
+#ifndef __VIDEOTHUMB_UTIL_H__
+#define __VIDEOTHUMB_UTIL_H__
 
-typedef struct _imageConf {
-  int quality;
-  int dpi;
-  int optimize;
-  int smooth;
-  int baseline;
-} ImageConf;
+#include <stdint.h>
 
-typedef struct _reqInfo {
-  char* file;
-  int second;
-  int width;
-  int height;
-} RequestInfo;
+int parseInteger(const char* intStr, int defaultValue);
+void splitInteger(int64_t duration, int count, int64_t *result);
 
-typedef struct _imgSize {
-  char* file;
-  int second;
-  int width;
-  int height;
-} ImageSize;
-
-typedef struct _imgBuf {
-  uint8_t *buffer;
-  int size;
-  int width;
-  int height;
-} ImageBuffer;
-
-typedef struct {
-  struct jpeg_destination_mgr pub;
-  unsigned char ** outbuffer;
-  unsigned long * outsize;
-  unsigned char * newbuffer;
-  JOCTET * buffer;
-  size_t bufsize;
-} my_mem_destination_mgr;
-
-ImageBuffer tve_open_video (const char *fname, int second, int width, int height);
+#endif // __VIDEOTHUMB_UTIL_H__

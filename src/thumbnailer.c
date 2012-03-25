@@ -31,66 +31,47 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "log.h"
+#include "util.h"
 
 #define OUTPUT_BUF_SIZE 4096
+#define VIDEO_SPLIT_COUNT 36
 typedef my_mem_destination_mgr * my_mem_dest_ptr;
 
-void 
-tve_init_libraries(void)
+void tve_init_libraries(void)
 {
   av_register_all();
 }
 
-ImageSize 
-get_new_frame_size(int input_width, int input_height, int output_width, int output_height) 
+ImageSize get_new_frame_size(int input_width, int input_height, int output_width, int output_height) 
 {
-  float scale           = 0.0;
-  float scale_x         = 0.0;
-  float scale_y         = 0.0;
-  float scale_out       = 0.0;
-  float scale_sws       = 0.0;
-  int sws_width         = 0;
-  int sws_height        = 0;
-  
-  if (output_width == 0) 
-  {
-      output_width = input_width;
-  } 
-  if (output_height == 0) 
-  {
-      output_height = input_height;
-  }
+  float scale = 0.0;
 
-  scale     = (float) input_width / input_height;
-  scale_out = (float) output_width / output_height;
-  sws_width = output_width;
-  sws_height = output_height;
-  if (scale != scale_out) 
-  {
-    scale_x = (float) output_width / input_width;
-    scale_y = (float) output_height / input_height;
-    if (scale_x > scale_y)
-    {
-      scale_sws = scale_x;
-    } else {
-      scale_sws = scale_y;
-    } 
-    sws_width = output_width * scale_sws + 0.5;
-    sws_height = output_height * scale_sws + 0.5;
-  }
-  
   ImageSize imageSize;
-  imageSize.width = sws_width;
-  imageSize.height = sws_height;
-  return imageSize;
+  imageSize.width = output_width;
+  imageSize.height = output_height;
 
+  if ((imageSize.width>0)&&(imageSize.height>0)) {
+    // This "IF" is needed even if it is empty, or else the program would fall inside another case
+  }
+  else if ((imageSize.width==0) && (imageSize.height==0)) {
+    imageSize.width = input_width;
+    imageSize.height = input_height;
+  }
+  else if (imageSize.width > 0) {
+    scale = (float) output_width / input_width;
+    imageSize.height = input_height * scale;
+  }
+  else if (imageSize.height > 0) {
+    scale = (float) output_height / input_height;
+    imageSize.width = input_width * scale;
+  }
+
+  return imageSize;
 }
 
-void
-init_mem_destination (j_compress_ptr cinfo){ }
+void init_mem_destination (j_compress_ptr cinfo){ }
 
-boolean
-empty_mem_output_buffer (j_compress_ptr cinfo)
+boolean empty_mem_output_buffer (j_compress_ptr cinfo)
 {
   size_t nextsize;
   JOCTET * nextbuffer;
@@ -113,16 +94,14 @@ empty_mem_output_buffer (j_compress_ptr cinfo)
   dest->bufsize = nextsize;
   return TRUE;
 }
-void
-term_mem_destination (j_compress_ptr cinfo)
+void term_mem_destination (j_compress_ptr cinfo)
 {
   my_mem_dest_ptr dest = (my_mem_dest_ptr) cinfo->dest;
   *dest->outbuffer = dest->buffer;
   *dest->outsize = dest->bufsize - dest->pub.free_in_buffer;
 }
 
-void
-jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long * outsize)
+void jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long * outsize)
 {
   my_mem_dest_ptr dest;
   if (outbuffer == NULL || outsize == NULL)
@@ -152,10 +131,7 @@ jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned long *
   dest->pub.free_in_buffer = dest->bufsize = *outsize;
 }
 
-
-
-ImageBuffer
-jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
+ImageBuffer jpeg_compress(ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
 {
     ImageBuffer             f;
     f.buffer              = NULL;
@@ -168,13 +144,14 @@ jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_hei
     unsigned char *outbuffer = malloc(outlen);
     if ( !buffer )
     {
+      printf(">>>>>>>>>>>>>>>>>> buffer null\n");
       return f;
-    } 
+    }
 
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_compress(&cinfo);
     jpeg_mem_dest (&cinfo, &outbuffer, &outlen);
-    
+
     cinfo.image_width = out_width;
     cinfo.image_height = out_height;
     cinfo.input_components = 3;
@@ -206,49 +183,104 @@ jpeg_compress( ImageConf imageConf, uint8_t * buffer, int out_width, int out_hei
     f.buffer = outbuffer;
     f.size = outlen;
     jpeg_destroy_compress(&cinfo);
+
+    // TODO: PRECISA LIBERAR ESSA MEMORIA LÁ FORA DA FUNCTION!!!!!!!!!!!!!!!!!!!!!
+    // free(new_buffer);
+
     return f;
 }
 
+#define PIXEL_LENGTH 3
+ImageBuffer joinImages(AVFrame** frames, int count, int width, int height) {
+  ImageBuffer result;
+  result.buffer = NULL;
+  result.size = 0;
+  result.width = 0;
+  result.height = 0;
+  if ((!frames) || (count<=0) || (width<=0) || (height<=0)) return result;
 
-ImageBuffer write_jpeg (AVCodecContext *codec_ctx, AVFrame *frame_av, int width, int height)
-{ 
-  AVCodecContext         *p_codec_ctx; 
-  AVCodec                *pOCodec; 
-  uint8_t                *Buffer; 
-  int                     BufSiz; 
-  int                     BufSizActual; 
-  int                     ImgFmt = PIX_FMT_YUVJ420P;
-  ImageBuffer             f;
-  f.buffer              = NULL;
-  f.size                = 0;  
-  ImageSize imageSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
+  int cols = (int)abs(sqrt((float)count));
+  int rows = cols + ((count%cols)>0 ? 1 : 0);
+  printf("cols: %d\n", cols);
+  printf("rows: %d\n", rows);
+
+  result.size = width * height * cols * rows * PIXEL_LENGTH;
+  result.buffer = malloc(result.size);
+  printf(">>> buffer size: %d\n", result.size);
+  result.width = cols * width;
+  result.height = rows * height;
+
+  int byteCount = 0;
+  int iW = 0;
+  for (; iW<width; ++iW) {
+    int iH = 0;
+    for (; iH<height; ++iH) {
+      int iCol = 0;
+      for (; iCol<cols; ++iCol) {
+        int iRow = 0;
+        for (; iRow<rows; ++iRow) {
+          if (count <= (iCol + iRow*cols)) break; // evita escrever a mais
+
+          int offsetSingle = PIXEL_LENGTH*(iW + iH*width);
+          int offsetJoined = PIXEL_LENGTH*(iRow*cols*width*height + iCol*width + iW + iH*width*cols);
+
+          int iPixel = 0;
+          for (; iPixel<PIXEL_LENGTH; ++iPixel) {
+            ++byteCount;
+            int currentFrame = iCol + iRow*cols;
+            result.buffer[iPixel + offsetJoined] = frames[currentFrame]->data[0][iPixel + offsetSingle];
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+AVFrame *resizeFrame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize) {
+  uint8_t *Buffer; 
+  int     BufSiz; 
+  int     BufSizActual; 
+  int     ImgFmt = PIX_FMT_YUVJ420P;
 
   //Alloc frame
   AVFrame *frameRGB_av = avcodec_alloc_frame();
-  BufSiz = avpicture_get_size (PIX_FMT_RGB24, imageSize.width, imageSize.height );
-  Buffer = (uint8_t *)malloc ( BufSiz ); 
-  if ( Buffer == NULL )
-  {
-      return ( f ); 
-  } 
-  memset ( Buffer, 0, BufSiz ); 
-  avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize.width, imageSize.height);
+  BufSiz = avpicture_get_size (PIX_FMT_RGB24, imageSize->width, imageSize->height );
+  Buffer = (uint8_t *)malloc(BufSiz);
+  if (Buffer == NULL) {
+      return NULL;
+  }
+  memset (Buffer, 0, BufSiz);
+  avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize->width, imageSize->height);
   //Resize frame
   struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
-          ImgFmt, imageSize.width, imageSize.height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
-  
+          ImgFmt, imageSize->width, imageSize->height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+
   sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
                       codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
   sws_freeContext(image_ctx);
 
-  ImageConf cf;
-  cf.quality = 100;
-  cf.dpi = 72;
-  cf.smooth = 1;
-  cf.baseline = 1;
-  
-  ImageBuffer jpeg = jpeg_compress(cf, frameRGB_av->data[0], imageSize.width, imageSize.height);
-  return jpeg; 
+  return frameRGB_av;
+}
+
+AVFrame* getFrameInSecond(AVCodecContext* codec_ctx, AVFormatContext *format_ctx, int video_stream, int64_t second) {
+  AVFrame* frame = avcodec_alloc_frame();
+  AVPacket packet;
+  int frame_end = 0;
+  int rc = 0;
+  if ((rc = av_seek_frame(format_ctx, -1, second, 0)) < 0) {
+    LOG_ERROR("Seek on invalid time");
+    return frame;
+  }
+  while (!frame_end && (av_read_frame(format_ctx, &packet) >= 0)) {
+    if (packet.stream_index == video_stream) {
+      avcodec_decode_video2(codec_ctx, frame, &frame_end, &packet);
+    }
+    av_free_packet(&packet);
+    printf(".");
+    if (frame_end) printf("!\n");
+  }
+  return frame;
 }
 
 ImageBuffer tve_open_video (const char *fname, int second, int width, int height)
@@ -269,7 +301,7 @@ ImageBuffer tve_open_video (const char *fname, int second, int width, int height
   format_ctx = avformat_alloc_context();
   if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
   {
-    LOG_ERROR("avformat_open_input() has failed");
+    LOG_ERROR("avformat_open_input() has failed: %s", fname);
     return memJpeg;
   }
   if (avformat_find_stream_info(format_ctx, NULL) < 0)
@@ -306,31 +338,42 @@ ImageBuffer tve_open_video (const char *fname, int second, int width, int height
     LOG_ERROR("unable to open codec");
     return memJpeg;
   }
-  frame_av = avcodec_alloc_frame();
-  if ((frame_av == NULL))
-  {
-    LOG_ERROR("Can't allocate memory to frame");
-    return memJpeg;
+
+  int64_t *framePosition = (int64_t*)malloc(sizeof(int64_t)*VIDEO_SPLIT_COUNT);
+  splitInteger(format_ctx->duration, VIDEO_SPLIT_COUNT, framePosition);
+
+  ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
+
+  AVFrame *frameList[VIDEO_SPLIT_COUNT];
+  int counter = 0;
+
+  // AVFrame* temp = getFrameInSecond(codec_ctx, format_ctx, video_stream, second / AV_TIME_BASE);
+  // frameList[0] = resizeFrame(codec_ctx, temp, width, height, &finalSize);
+  for (; counter<VIDEO_SPLIT_COUNT; ++counter) {
+    AVFrame* currentFrame = getFrameInSecond(codec_ctx, format_ctx, video_stream, framePosition[counter]);
+    frameList[counter] = resizeFrame(codec_ctx, currentFrame, &finalSize);
   }
-  if ((rc = av_seek_frame(format_ctx, -1, second * AV_TIME_BASE, 0)) < 0) 
-  {
-    LOG_ERROR("Seek on invalid time");
-    return memJpeg;
+
+  ImageBuffer rawImage = joinImages(frameList, VIDEO_SPLIT_COUNT, finalSize.width, finalSize.height);
+  if (!rawImage.buffer) {
+   printf("Invalid RAW joined image. Buffer size: %d\n", rawImage.size);
+   return memJpeg;
   }
-  int count = 0;
-  while (!frame_end && av_read_frame(format_ctx, &packet_av) >= 0) 
-  {  
-    count++;
-    if (packet_av.stream_index == video_stream) 
-    {
-      avcodec_decode_video2(codec_ctx, frame_av, &frame_end, &packet_av);
-    }
-    if (frame_end)
-    {
-      memJpeg = write_jpeg(codec_ctx, frame_av, width, height);
-    }  
-    av_free_packet(&packet_av);
+  printf("RAW size: %d\n", rawImage.size);
+
+  ImageConf cf;
+  cf.quality = 100;
+  cf.dpi = 72;
+  cf.smooth = 1;
+  cf.baseline = 1;
+
+  // memJpeg = jpeg_compress(cf, frameList[0]->data[0], finalSize.width, finalSize.height);
+  memJpeg = jpeg_compress(cf, rawImage.buffer, rawImage.width, rawImage.height);
+
+  for (counter=0; counter<VIDEO_SPLIT_COUNT; ++counter) {
+    if (frameList[counter]) av_free(frameList[counter]);
   }
-  av_free_packet(&packet_av);
+  free(framePosition);
+
   return memJpeg;
 }

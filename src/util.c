@@ -28,49 +28,23 @@
  * SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/opt.h>
-#include <libswscale/swscale.h>
-#include <jpeglib.h>
+#include "util.h"
 
-typedef struct _imageConf {
-  int quality;
-  int dpi;
-  int optimize;
-  int smooth;
-  int baseline;
-} ImageConf;
+int parseInteger(const char* intStr, int defaultValue) {
+  if (intStr) {
+    return atoi(intStr);
+  }
+  return defaultValue;
+}
+void splitInteger(int64_t duration, int count, int64_t *result) {
+  if (duration < count) return;
+  if (!result) return;
 
-typedef struct _reqInfo {
-  char* file;
-  int second;
-  int width;
-  int height;
-} RequestInfo;
-
-typedef struct _imgSize {
-  char* file;
-  int second;
-  int width;
-  int height;
-} ImageSize;
-
-typedef struct _imgBuf {
-  uint8_t *buffer;
-  int size;
-  int width;
-  int height;
-} ImageBuffer;
-
-typedef struct {
-  struct jpeg_destination_mgr pub;
-  unsigned char ** outbuffer;
-  unsigned long * outsize;
-  unsigned char * newbuffer;
-  JOCTET * buffer;
-  size_t bufsize;
-} my_mem_destination_mgr;
-
-ImageBuffer tve_open_video (const char *fname, int second, int width, int height);
+  int i = 0;
+  int64_t current = 0;
+  int64_t increment = duration / count;
+  for (; i<count; ++i) {
+    result[i] = current;
+    current += increment;
+  }
+}

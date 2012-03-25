@@ -47,8 +47,8 @@ clean:
 	rm -Rf $(BINNAME) $(NAME) src/*.o src/*~ src/*.la src/*.lo src/*.slo src/*.so src/*.loT src/.libs src/*.jpg
 
 apxs: 
-	apxs -c $(FLAGS) src/module_main.c src/querystring.c src/thumbnailer.c -o $(BINNAME) $(LIBS)
+	apxs -c $(FLAGS) src/util.c src/module_main.c src/querystring.c src/thumbnailer.c -o $(BINNAME) $(LIBS)
 
 .PHONY : test
 test:
-	gcc $(CFLAGS) $(LIBS) src/thumbnailer.c src/querystring.c test/main.c -o $(NAME)
+	gcc $(CFLAGS) $(LIBS) src/util.c src/thumbnailer.c src/querystring.c test/main.c -o $(NAME)

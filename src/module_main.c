@@ -29,30 +29,56 @@
  */
 
 #include "module.h"
+#include "util.h"
 
-#define CONFIG_DEFAULT_ENABLED "enabled"
+#define BOOL int
+
+#define CONFIG_DEFAULT_ENABLED FALSE
+#define CONFIG_DEFAULT_MEDIAS_PATH "/tmp"
+#define CONFIG_DEFAULT_JPEG_QUALITY 70
+
+#define MAX_PATH_LENGTH 1024
+
+// Set up the configuration
+typedef struct
+{
+  BOOL enabled;
+  const char* medias_path;
+  int quality;
+} module_config;
 
 static int videothumb_handler(request_rec *r) {
+  char fullVideoPath[MAX_PATH_LENGTH];
+
+  if (!r) return DECLINED;
+  module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
+
+  if (!conf->enabled) {
+    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...")
+     return DECLINED;
+  }
+
   if (r->args) {
     LOG_ERROR("request made: %s", r->args);
-    tve_init_libraries();
 
     RequestInfo requestInfo;
     void* ctx;
     parseQueryString(&ctx, r->args);
-    requestInfo.file = getParameter(ctx, "video");
-    
+    strncat(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
+    strncat(fullVideoPath, getParameter(ctx, "video"), MAX_PATH_LENGTH);
+
+    requestInfo.file = fullVideoPath;
     requestInfo.second = atoi(getParameter(ctx, "second"));
-    if(getParameter(ctx,"width") == NULL){
-      requestInfo.width = 0;
-    }else {
-      requestInfo.width = atoi(getParameter(ctx, "width"));      
-    }
-    if(getParameter(ctx,"height") == NULL){
-      requestInfo.height = 0;
-    }else {
-      requestInfo.height = atoi(getParameter(ctx, "height"));      
-    }
+
+    const char* temp = getParameter(ctx,"width");
+    if(temp == NULL) requestInfo.width = 0;
+    else requestInfo.width = atoi(temp);
+
+    temp = getParameter(ctx,"height");
+    if(temp == NULL) requestInfo.height = 0;
+    else requestInfo.height = atoi(temp);
+
+    tve_init_libraries();
     ImageBuffer jpeg = tve_open_video(requestInfo.file, requestInfo.second, requestInfo.width, requestInfo.height);
 
     if (jpeg.buffer) {
@@ -72,12 +98,6 @@ static void register_hooks (apr_pool_t *p) {
    ap_hook_handler(videothumb_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
-// Set up the configuration
-typedef struct
-{
-  char* enabled;
-} module_config;
-
 static void* create_config(apr_pool_t* p, server_rec* r)
 {
   // Allocate memory for the config object
@@ -86,23 +106,51 @@ static void* create_config(apr_pool_t* p, server_rec* r)
 
   // Set default values
   newcfg->enabled = CONFIG_DEFAULT_ENABLED;
+  newcfg->medias_path = CONFIG_DEFAULT_MEDIAS_PATH;
+  newcfg->quality = CONFIG_DEFAULT_JPEG_QUALITY;
+
+  return newcfg;
 }
 
 static const char* config_set_enabled(cmd_parms* parms, void* mconfig, const char* arg)
 {
   module_config* cfg = ap_get_module_config(parms->server->module_config, &videothumb_module);
-  cfg->enabled = (char*)arg;
+  cfg->enabled = strcmp(arg, "true") == 0;
+  return NULL;
+}
+static const char* config_set_medias_path(cmd_parms* parms, void* mconfig, const char* arg)
+{
+  module_config* cfg = ap_get_module_config(parms->server->module_config, &videothumb_module);
+  cfg->medias_path = (char*)arg;
+  return NULL;
+}
+static const char* config_set_quality(cmd_parms* parms, void* mconfig, const char* arg)
+{
+  module_config* cfg = ap_get_module_config(parms->server->module_config, &videothumb_module);
+  cfg->quality = atoi(arg);
   return NULL;
 }
 
 static const command_rec config_array[] =
 {
   AP_INIT_TAKE1(
-    "VideothumbEnabled",
+    "VideoThumb_Enabled",
     config_set_enabled,
     NULL,
     RSRC_CONF,
-    "Videothumb configuration key loaded: VideothumbEnabled"),
+    "Videothumb configuration key loaded: VideoThumb_Enabled"),
+  AP_INIT_TAKE1(
+    "VideoThumb_MediasPath",
+    config_set_medias_path,
+    NULL,
+    RSRC_CONF,
+    "Videothumb configuration key loaded: VideoThumb_MediasPath"),
+  AP_INIT_TAKE1(
+    "VideoThumb_JpegQuality",
+    config_set_quality,
+    NULL,
+    RSRC_CONF,
+    "Videothumb configuration key loaded: VideoThumb_JpegQuality"),
   { NULL }
 };
 
