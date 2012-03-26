@@ -34,7 +34,6 @@
 #include "util.h"
 
 #define OUTPUT_BUF_SIZE 4096
-#define VIDEO_SPLIT_COUNT 36
 typedef my_mem_destination_mgr * my_mem_dest_ptr;
 
 void tve_init_libraries(void)
@@ -131,7 +130,7 @@ void jpeg_mem_dest (j_compress_ptr cinfo, unsigned char ** outbuffer, unsigned l
   dest->pub.free_in_buffer = dest->bufsize = *outsize;
 }
 
-ImageBuffer jpeg_compress(ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
+ImageBuffer compressJpeg(ImageConf imageConf, uint8_t * buffer, int out_width, int out_height)
 {
     ImageBuffer             f;
     f.buffer              = NULL;
@@ -191,7 +190,7 @@ ImageBuffer jpeg_compress(ImageConf imageConf, uint8_t * buffer, int out_width, 
 }
 
 #define PIXEL_LENGTH 3
-ImageBuffer joinImages(AVFrame** frames, int count, int width, int height) {
+ImageBuffer joinImages(AVFrame** frames, int count, int columns, int width, int height) {
   ImageBuffer result;
   result.buffer = NULL;
   result.size = 0;
@@ -199,17 +198,39 @@ ImageBuffer joinImages(AVFrame** frames, int count, int width, int height) {
   result.height = 0;
   if ((!frames) || (count<=0) || (width<=0) || (height<=0)) return result;
 
-  int cols = (int)abs(sqrt((float)count));
-  int rows = cols + ((count%cols)>0 ? 1 : 0);
-  printf("cols: %d\n", cols);
-  printf("rows: %d\n", rows);
+  int cols = columns;
+  int rows = (count / cols) + ((count%cols) > 0 ? 1 : 0);
 
   result.size = width * height * cols * rows * PIXEL_LENGTH;
   result.buffer = malloc(result.size);
-  printf(">>> buffer size: %d\n", result.size);
   result.width = cols * width;
   result.height = rows * height;
 
+  int currentColumn = 0;
+  int currentRow = 0;
+  int iCount;
+  for (iCount=0; iCount<count; ++iCount) {
+    int iHeight;
+    for (iHeight=0; iHeight<height; ++iHeight) {
+      int offsetSrc = PIXEL_LENGTH * iHeight * width;
+      int offsetDest = PIXEL_LENGTH * (width*(currentColumn + (currentRow*height+iHeight)*cols));
+      
+      if (offsetDest >= result.size) {
+        continue;
+      }
+      
+      void* src = &(frames[iCount]->data[0][offsetSrc]);
+      void* dst = &(result.buffer[offsetDest]);
+      memcpy(dst, src, width*PIXEL_LENGTH);
+    }
+
+    ++currentColumn;
+    if (currentColumn >= cols) {
+      currentColumn = 0;
+      ++currentRow;
+    }
+  }
+/*
   int byteCount = 0;
   int iW = 0;
   for (; iW<width; ++iW) {
@@ -219,7 +240,7 @@ ImageBuffer joinImages(AVFrame** frames, int count, int width, int height) {
       for (; iCol<cols; ++iCol) {
         int iRow = 0;
         for (; iRow<rows; ++iRow) {
-          if (count <= (iCol + iRow*cols)) break; // evita escrever a mais
+          if (count <= (iCol + iRow*cols)) break;
 
           int offsetSingle = PIXEL_LENGTH*(iW + iH*width);
           int offsetJoined = PIXEL_LENGTH*(iRow*cols*width*height + iCol*width + iW + iH*width*cols);
@@ -234,6 +255,7 @@ ImageBuffer joinImages(AVFrame** frames, int count, int width, int height) {
       }
     }
   }
+*/
   return result;
 }
 
@@ -277,13 +299,11 @@ AVFrame* getFrameInSecond(AVCodecContext* codec_ctx, AVFormatContext *format_ctx
       avcodec_decode_video2(codec_ctx, frame, &frame_end, &packet);
     }
     av_free_packet(&packet);
-    printf(".");
-    if (frame_end) printf("!\n");
   }
   return frame;
 }
 
-ImageBuffer tve_open_video (const char *fname, int second, int width, int height)
+ImageBuffer splitVideoInJpeg(RequestInfo request)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
@@ -299,19 +319,18 @@ ImageBuffer tve_open_video (const char *fname, int second, int width, int height
   int frame_end = 0;
 
   format_ctx = avformat_alloc_context();
-  if (avformat_open_input(&format_ctx, fname, NULL, NULL) != 0)
+  int openResult = avformat_open_input(&format_ctx, request.file, NULL, NULL);
+  if (openResult != 0)
   {
-    LOG_ERROR("avformat_open_input() has failed: %s", fname);
+    LOG_ERROR("avformat_open_input() has failed: %s", request.file);
+    char errBuffer[1000];
+    av_strerror(openResult, errBuffer, 1000);
+    LOG_ERROR("ERROR: %s", errBuffer);
     return memJpeg;
   }
   if (avformat_find_stream_info(format_ctx, NULL) < 0)
   {
     LOG_ERROR("av_find_stream_info() has failed");
-    return memJpeg;
-  }
-  if ((format_ctx->duration > 0) && (second > (format_ctx->duration / AV_TIME_BASE)))
-  {
-    LOG_ERROR("duration zero or second request over duration %llu segundos", format_ctx->duration / AV_TIME_BASE);
     return memJpeg;
   }
   video_stream = -1;
@@ -339,40 +358,37 @@ ImageBuffer tve_open_video (const char *fname, int second, int width, int height
     return memJpeg;
   }
 
-  int64_t *framePosition = (int64_t*)malloc(sizeof(int64_t)*VIDEO_SPLIT_COUNT);
-  splitInteger(format_ctx->duration, VIDEO_SPLIT_COUNT, framePosition);
+  int64_t *framePosition = (int64_t*)malloc(sizeof(int64_t)*request.split);
+  splitInteger(format_ctx->duration, request.split, framePosition);
 
-  ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, width, height);
+  ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, request.width, request.height);
+  AVFrame *frameList[request.split];
 
-  AVFrame *frameList[VIDEO_SPLIT_COUNT];
   int counter = 0;
-
-  // AVFrame* temp = getFrameInSecond(codec_ctx, format_ctx, video_stream, second / AV_TIME_BASE);
-  // frameList[0] = resizeFrame(codec_ctx, temp, width, height, &finalSize);
-  for (; counter<VIDEO_SPLIT_COUNT; ++counter) {
+  for (; counter<request.split; ++counter) {
     AVFrame* currentFrame = getFrameInSecond(codec_ctx, format_ctx, video_stream, framePosition[counter]);
     frameList[counter] = resizeFrame(codec_ctx, currentFrame, &finalSize);
+    av_free(currentFrame);
   }
 
-  ImageBuffer rawImage = joinImages(frameList, VIDEO_SPLIT_COUNT, finalSize.width, finalSize.height);
+  ImageBuffer rawImage = joinImages(frameList, request.split, request.columns, finalSize.width, finalSize.height);
   if (!rawImage.buffer) {
-   printf("Invalid RAW joined image. Buffer size: %d\n", rawImage.size);
+   LOG_ERROR("Invalid RAW joined image. Buffer size: %d\n", rawImage.size);
    return memJpeg;
   }
-  printf("RAW size: %d\n", rawImage.size);
 
   ImageConf cf;
-  cf.quality = 100;
+  cf.quality = request.jpegQuality;
   cf.dpi = 72;
   cf.smooth = 1;
   cf.baseline = 1;
 
-  // memJpeg = jpeg_compress(cf, frameList[0]->data[0], finalSize.width, finalSize.height);
-  memJpeg = jpeg_compress(cf, rawImage.buffer, rawImage.width, rawImage.height);
+  memJpeg = compressJpeg(cf, rawImage.buffer, rawImage.width, rawImage.height);
 
-  for (counter=0; counter<VIDEO_SPLIT_COUNT; ++counter) {
+  for (counter=0; counter<request.split; ++counter) {
     if (frameList[counter]) av_free(frameList[counter]);
   }
+  av_free(format_ctx);
   free(framePosition);
 
   return memJpeg;

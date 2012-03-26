@@ -29,6 +29,7 @@
  */
 
 #include "util.h"
+#include "log.h"
 
 int parseInteger(const char* intStr, int defaultValue) {
   if (intStr) {

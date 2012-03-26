@@ -44,8 +44,10 @@ typedef struct _imageConf {
 } ImageConf;
 
 typedef struct _reqInfo {
-  char* file;
-  int second;
+  const char* file;
+  int split;
+  int columns;
+  int jpegQuality;
   int width;
   int height;
 } RequestInfo;
@@ -73,4 +75,4 @@ typedef struct {
   size_t bufsize;
 } my_mem_destination_mgr;
 
-ImageBuffer tve_open_video (const char *fname, int second, int width, int height);
+ImageBuffer splitVideoInJpeg(RequestInfo request);

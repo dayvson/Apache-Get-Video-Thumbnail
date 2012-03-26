@@ -33,6 +33,8 @@
 
 #define BOOL int
 
+#define DEFAULT_SPLIT "36"
+#define DEFAULT_COLUMNS "1"
 #define CONFIG_DEFAULT_ENABLED FALSE
 #define CONFIG_DEFAULT_MEDIAS_PATH "/tmp"
 #define CONFIG_DEFAULT_JPEG_QUALITY 70
@@ -64,13 +66,17 @@ static int videothumb_handler(request_rec *r) {
     RequestInfo requestInfo;
     void* ctx;
     parseQueryString(&ctx, r->args);
-    strncat(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
+    strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     strncat(fullVideoPath, getParameter(ctx, "video"), MAX_PATH_LENGTH);
 
+    const char* temp = getParameter(ctx, "split");
+    requestInfo.split = atoi(temp ? temp : DEFAULT_SPLIT);
+    temp = getParameter(ctx, "columns");
+    requestInfo.columns = atoi(temp ? temp : DEFAULT_COLUMNS);
     requestInfo.file = fullVideoPath;
-    requestInfo.second = atoi(getParameter(ctx, "second"));
+    requestInfo.jpegQuality = conf->quality;
 
-    const char* temp = getParameter(ctx,"width");
+    temp = getParameter(ctx,"width");
     if(temp == NULL) requestInfo.width = 0;
     else requestInfo.width = atoi(temp);
 
@@ -79,7 +85,7 @@ static int videothumb_handler(request_rec *r) {
     else requestInfo.height = atoi(temp);
 
     tve_init_libraries();
-    ImageBuffer jpeg = tve_open_video(requestInfo.file, requestInfo.second, requestInfo.width, requestInfo.height);
+    ImageBuffer jpeg = splitVideoInJpeg(requestInfo);
 
     if (jpeg.buffer) {
       LOG_ERROR(">> Retornando JPEG");

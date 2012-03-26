@@ -24,8 +24,14 @@ void testQueryString() {
   releaseContext(ctx);
 }
 void testVideoParse(const char* videoFile, const char* jpegFile) {
-  av_register_all();
-  ImageBuffer jpeg = tve_open_video(videoFile, 400, 0, 50);
+  tve_init_libraries();
+  
+  RequestInfo req;
+  req.file = videoFile;
+  req.split = 16;
+  req.width = 0;
+  req.height = 100;
+  ImageBuffer jpeg = splitVideoInJpeg(req);
 
   if (jpeg.buffer) {
     printf("Writing file: %s\n", jpegFile);
@@ -42,6 +48,6 @@ void testVideoParse(const char* videoFile, const char* jpegFile) {
 int main(int argc, char**argv)
 {
   testQueryString();
-  testVideoParse("/Users/tiagopadua/dev/Apache-Get-Video-Thumbnail/video_sample/cartoons.avi", "/Users/tiagopadua/Desktop/video.jpg");
+  testVideoParse("video_sample/big.ogg", "video.jpg");
   return 0;
 }
