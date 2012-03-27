@@ -31,9 +31,74 @@
 #ifndef __VIDEOTHUMB_UTIL_H__
 #define __VIDEOTHUMB_UTIL_H__
 
+#include <stdio.h>
+#include <time.h>
 #include <stdint.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <jpeglib.h>
 
-int parseInteger(const char* intStr, int defaultValue);
-void splitInteger(int64_t duration, int count, int64_t *result);
+#define PIXEL_LENGTH 3
+#define OUTPUT_BUF_SIZE 4096
+
+typedef struct _imageConf {
+  int quality;
+  int dpi;
+  int optimize;
+  int smooth;
+  int baseline;
+} ImageConf;
+
+typedef struct _reqInfo {
+  const char* file;
+  int split;
+  int columns;
+  int jpegQuality;
+  int width;
+  int height;
+  int second;
+} RequestInfo;
+
+typedef struct _imgSize {
+  char* file;
+  int second;
+  int width;
+  int height;
+} ImageSize;
+
+typedef struct _imgBuf {
+  uint8_t *buffer;
+  int size;
+  int width;
+  int height;
+} ImageBuffer;
+
+typedef struct {
+  struct jpeg_destination_mgr pub;
+  unsigned char ** outbuffer;
+  unsigned long * outsize;
+  unsigned char * newbuffer;
+  JOCTET * buffer;
+  size_t bufsize;
+} my_mem_destination_mgr;
+
+int parse_integer(const char* intStr, int defaultValue);
+void split_integer(int64_t duration, int count, int64_t *result);
+AVFrame* get_frame_by_second(AVCodecContext* codec_ctx, AVFormatContext *format_ctx, int video_stream, int64_t second);
+ImageSize get_new_frame_size(int input_width, int input_height, int output_width, int output_height);
+AVFrame* resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize);
+void init_libraries(void);
+static void LOG_ERROR_DATE(){
+  time_t log_time;
+  time(&log_time);
+  struct tm* timeinfo = localtime(&log_time);
+  char st_time[80];
+  strftime(st_time, 80, "%c", timeinfo);
+  fprintf(stderr, "[%s] ", st_time);
+}
+
+#define LOG_ERROR(...) LOG_ERROR_DATE();fprintf(stderr,"[mod_videothumb] %s:%d - ", __FILE__, __LINE__);fprintf(stderr,__VA_ARGS__);fprintf(stderr,"\r\n");
 
 #endif // __VIDEOTHUMB_UTIL_H__

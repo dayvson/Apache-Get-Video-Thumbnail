@@ -29,23 +29,114 @@
  */
 
 #include "util.h"
-#include "log.h"
 
-int parseInteger(const char* intStr, int defaultValue) {
-  if (intStr) {
+
+int parse_integer(const char* intStr, int defaultValue) 
+{
+  if (intStr) 
+  {
     return atoi(intStr);
   }
   return defaultValue;
 }
-void splitInteger(int64_t duration, int count, int64_t *result) {
+
+void split_integer(int64_t duration, int count, int64_t *result) 
+{
   if (duration < count) return;
   if (!result) return;
 
-  int i = 0;
+  int i;
   int64_t current = 0;
   int64_t increment = duration / count;
-  for (; i<count; ++i) {
+  for (i = 0; i<count; ++i) 
+  {
     result[i] = current;
     current += increment;
   }
 }
+
+ImageSize get_new_frame_size(int input_width, int input_height, int output_width, int output_height) 
+{
+  float scale = 0.0;
+
+  ImageSize imageSize;
+  imageSize.width = output_width;
+  imageSize.height = output_height;
+
+  if ((imageSize.width>0) && (imageSize.height>0)) 
+  {
+    return imageSize;
+  }
+  else if ((imageSize.width==0) && (imageSize.height==0)) 
+  {
+    imageSize.width = input_width;
+    imageSize.height = input_height;
+  }
+  else if (imageSize.width > 0) {
+    scale = (float) output_width / input_width;
+    imageSize.height = input_height * scale;
+  }
+  else if (imageSize.height > 0) {
+    scale = (float) output_height / input_height;
+    imageSize.width = input_width * scale;
+  }
+  return imageSize;
+}
+
+AVFrame* get_frame_by_second(AVCodecContext* codec_ctx, AVFormatContext *format_ctx,
+                                  int video_stream, int64_t second) 
+{
+  AVFrame* frame = avcodec_alloc_frame();
+  AVPacket packet;
+  int frame_end = 0;
+  int rc = 0;
+
+  if ((rc = av_seek_frame(format_ctx, -1, second , 0)) < 0) 
+  {
+    LOG_ERROR("Seek on invalid time");
+    return frame;
+  }
+  while (!frame_end && (av_read_frame(format_ctx, &packet) >= 0)) 
+  {
+    if (packet.stream_index == video_stream) 
+    {
+      avcodec_decode_video2(codec_ctx, frame, &frame_end, &packet);
+    }
+    av_free_packet(&packet);
+  }
+  return frame;
+}
+
+AVFrame *resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize) 
+{
+  uint8_t *Buffer; 
+  int     BufSiz; 
+  int     BufSizActual; 
+  int     ImgFmt = PIX_FMT_YUVJ420P;
+
+  //Alloc frame
+  AVFrame *frameRGB_av = avcodec_alloc_frame();
+  BufSiz = avpicture_get_size (PIX_FMT_RGB24, imageSize->width, imageSize->height );
+  Buffer = (uint8_t *)malloc(BufSiz);
+  if (Buffer == NULL) 
+  {
+      return NULL;
+  }
+  memset (Buffer, 0, BufSiz);
+  avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize->width, imageSize->height);
+  //Resize frame
+  struct SwsContext *image_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, 
+          ImgFmt, imageSize->width, imageSize->height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+
+  sws_scale(image_ctx, (const uint8_t * const *) frame_av->data, frame_av->linesize, 0, 
+                      codec_ctx->height, frameRGB_av->data, frameRGB_av->linesize);
+  sws_freeContext(image_ctx);
+
+  return frameRGB_av;
+}
+
+void init_libraries(void)
+{
+  av_register_all();
+}
+
