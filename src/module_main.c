@@ -29,8 +29,8 @@
  */
 
 #include "module.h"
-#include "util.h"
-
+#include "storyboard.h"
+#include "thumbnail.h"
 #define BOOL int
 
 #define DEFAULT_SPLIT "36"
@@ -51,42 +51,41 @@ typedef struct
 
 static int videothumb_handler(request_rec *r) {
   char fullVideoPath[MAX_PATH_LENGTH];
-
+  
   if (!r) return DECLINED;
   module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
-
+  
   if (!conf->enabled) {
     LOG_ERROR("VideoThumb module is disabled. Returning request to apache...")
      return DECLINED;
   }
-
+  
   if (r->args) {
     LOG_ERROR("request made: %s", r->args);
-
+  
     RequestInfo requestInfo;
     void* ctx;
     parseQueryString(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     strncat(fullVideoPath, getParameter(ctx, "video"), MAX_PATH_LENGTH);
-
+  
     const char* temp = getParameter(ctx, "split");
     requestInfo.split = atoi(temp ? temp : DEFAULT_SPLIT);
     temp = getParameter(ctx, "columns");
     requestInfo.columns = atoi(temp ? temp : DEFAULT_COLUMNS);
     requestInfo.file = fullVideoPath;
     requestInfo.jpegQuality = conf->quality;
-
+  
     temp = getParameter(ctx,"width");
     if(temp == NULL) requestInfo.width = 0;
     else requestInfo.width = atoi(temp);
-
+  
     temp = getParameter(ctx,"height");
     if(temp == NULL) requestInfo.height = 0;
     else requestInfo.height = atoi(temp);
-
-    tve_init_libraries();
-    ImageBuffer jpeg = splitVideoInJpeg(requestInfo);
-
+    init_libraries();
+    ImageBuffer jpeg = get_storyboard(requestInfo);
+  
     if (jpeg.buffer) {
       LOG_ERROR(">> Retornando JPEG");
       ap_set_content_type(r, "image/jpeg");

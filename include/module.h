@@ -33,8 +33,8 @@
 
 #include "httpd.h"
 #include "http_config.h"
-#include "log.h"
-#include "thumbnailer.h"
+#include "util.h"
+#include "storyboard.h"
 #include "querystring.h"
 
 // Just define the module, for references.
