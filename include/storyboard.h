@@ -27,13 +27,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "thumbnailer.h"
+
+
+#ifndef __VIDEOTHUMB_STORYBOARD_H__
+#define __VIDEOTHUMB_STORYBOARD_H__
+ 
 #include "stdlib.h"
 #include "stdio.h"
-#include "log.h"
-typedef struct _storyBuf {
-  uint8_t *buffer;
-  int size;
-} StoryboardBuffer;
+#include "util.h"
 
-StoryboardBuffer tve_storyboard(const char *fname, int qtd_frames, int width, int height);
+ImageBuffer get_storyboard(RequestInfo info);
+
+#endif //__VIDEOTHUMB_STORYBOARD_H__
