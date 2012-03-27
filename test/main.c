@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "thumbnailer.h"
+#include "thumbnail.h"
+#include "storyboard.h"
 #include "querystring.h"
 
 void usage(const char* binName) {
@@ -24,14 +25,14 @@ void testQueryString() {
   releaseContext(ctx);
 }
 void testVideoParse(const char* videoFile, const char* jpegFile) {
-  tve_init_libraries();
+  init_libraries();
   
   RequestInfo req;
   req.file = videoFile;
   req.split = 16;
   req.width = 0;
   req.height = 100;
-  ImageBuffer jpeg = splitVideoInJpeg(req);
+  ImageBuffer jpeg = get_storyboard(req);
 
   if (jpeg.buffer) {
     printf("Writing file: %s\n", jpegFile);
