@@ -29,13 +29,14 @@ void testVideoParse(const char* videoFile, const char* jpegFile) {
   
   RequestInfo req;
   req.file = videoFile;
-  req.split = 10;
+  req.split = 12;
   req.columns = 3;
-  req.pageSize = 3;
-  req.currentPage = 4;
+  req.pageSize = 12;
+  req.currentPage = 1;
+  req.second = 15;
   req.width = 0;
-  req.height = 100;
-  ImageBuffer jpeg = get_storyboard(req);
+  req.height = 300;
+  ImageBuffer jpeg = get_thumbnail(req);
 
   if (jpeg.buffer) {
     printf("Writing file: %s\n", jpegFile);
