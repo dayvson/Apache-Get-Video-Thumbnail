@@ -29,7 +29,10 @@ void testVideoParse(const char* videoFile, const char* jpegFile) {
   
   RequestInfo req;
   req.file = videoFile;
-  req.split = 16;
+  req.split = 10;
+  req.columns = 3;
+  req.pageSize = 3;
+  req.currentPage = 4;
   req.width = 0;
   req.height = 100;
   ImageBuffer jpeg = get_storyboard(req);
