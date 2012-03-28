@@ -59,6 +59,8 @@ typedef struct _reqInfo {
   int width;
   int height;
   int second;
+  int currentPage;
+  int totalPages;
 } RequestInfo;
 
 typedef struct _imgSize {

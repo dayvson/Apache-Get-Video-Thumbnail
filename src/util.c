@@ -104,6 +104,9 @@ AVFrame* get_frame_by_second(AVCodecContext* codec_ctx, AVFormatContext *format_
     }
     av_free_packet(&packet);
   }
+  av_seek_frame(format_ctx, video_stream, 0, AVSEEK_FLAG_BYTE);
+  avcodec_flush_buffers(codec_ctx);  
+
   return frame;
 }
 
