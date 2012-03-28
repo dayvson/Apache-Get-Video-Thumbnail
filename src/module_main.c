@@ -33,8 +33,7 @@
 #include "thumbnail.h"
 #define BOOL int
 
-#define DEFAULT_SPLIT "36"
-#define DEFAULT_COLUMNS "1"
+#define ONE_VALUE "1"
 #define CONFIG_DEFAULT_ENABLED FALSE
 #define CONFIG_DEFAULT_MEDIAS_PATH "/tmp"
 #define CONFIG_DEFAULT_JPEG_QUALITY 70
@@ -64,15 +63,16 @@ static int videothumb_handler(request_rec *r) {
     LOG_ERROR("request made: %s", r->args);
   
     RequestInfo requestInfo;
+    ImageBuffer jpeg;
     void* ctx;
     parseQueryString(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     strncat(fullVideoPath, getParameter(ctx, "video"), MAX_PATH_LENGTH);
   
     const char* temp = getParameter(ctx, "split");
-    requestInfo.split = atoi(temp ? temp : DEFAULT_SPLIT);
+    requestInfo.split = atoi(temp ? temp : ONE_VALUE);
     temp = getParameter(ctx, "columns");
-    requestInfo.columns = atoi(temp ? temp : DEFAULT_COLUMNS);
+    requestInfo.columns = atoi(temp ? temp : ONE_VALUE);
     requestInfo.file = fullVideoPath;
     requestInfo.jpegQuality = conf->quality;
   
@@ -83,11 +83,22 @@ static int videothumb_handler(request_rec *r) {
     temp = getParameter(ctx,"height");
     if(temp == NULL) requestInfo.height = 0;
     else requestInfo.height = atoi(temp);
+
+    temp = getParameter(ctx,"pageSize");
+    requestInfo.pageSize = temp ? atoi(temp) : requestInfo.split;
+
+    temp = getParameter(ctx,"currentPage");
+    requestInfo.currentPage = atoi(temp ? temp : ONE_VALUE);
+
     init_libraries();
-    ImageBuffer jpeg = get_storyboard(requestInfo);
+    temp = getParameter(ctx, "second");
+    if(temp == NULL) jpeg = get_storyboard(requestInfo);
+    else {
+      requestInfo.second =  atoi(temp ? temp : ONE_VALUE);
+      jpeg = get_thumbnail(requestInfo);
+    }
   
     if (jpeg.buffer) {
-      LOG_ERROR(">> Retornando JPEG");
       ap_set_content_type(r, "image/jpeg");
       ap_rwrite(jpeg.buffer, jpeg.size, r);
       } else {

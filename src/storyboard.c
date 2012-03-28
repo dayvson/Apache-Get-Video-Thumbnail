@@ -29,6 +29,7 @@
  */
 #include "storyboard.h"
 #include "jpegencoder.h"
+#include <math.h>
 
 ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int height) 
 {
@@ -134,23 +135,32 @@ ImageBuffer get_storyboard(RequestInfo info)
     LOG_ERROR("unable to open codec");
     return memJpeg;
   }
+  int counter = 0;
+  int pageSize = info.pageSize;
+  int totalP = ceil((double)info.split/(double)pageSize);
+  int start = (info.currentPage-1) * pageSize;
+  int end = info.currentPage * pageSize;
+  if(info.currentPage == totalP)
+  {
+    end = info.split;
+    pageSize = end-start;  
+  }
 
   int64_t *framePosition = (int64_t*)malloc(sizeof(int64_t)*info.split);
   split_integer(format_ctx->duration, info.split, framePosition);
 
   ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, info.width, info.height);
-  AVFrame *frameList[info.split];
-
-  int counter;
-  for (counter = 0; counter<info.split; ++counter) 
+  AVFrame *frameList[pageSize];
+  for (start; start<end; ++start)
   {
-    AVFrame* currentFrame = get_frame_by_second(codec_ctx, format_ctx, video_stream, framePosition[counter]);
+    AVFrame* currentFrame = get_frame_by_second(codec_ctx, format_ctx, video_stream, framePosition[start]);
     frameList[counter] = resize_frame(codec_ctx, currentFrame, &finalSize);
     av_free(currentFrame);
+    ++counter;
   }
-  LOG_ERROR("STORYBOARD");
-  ImageBuffer rawImage = join_images(frameList, info.split, info.columns, finalSize.width, finalSize.height);
-  if (!rawImage.buffer) {
+  ImageBuffer rawImage = join_images(frameList, pageSize, info.columns, finalSize.width, finalSize.height);
+  if (!rawImage.buffer) 
+  {
    LOG_ERROR("Invalid RAW joined image. Buffer size: %d\n", rawImage.size);
    return memJpeg;
   }
@@ -163,7 +173,8 @@ ImageBuffer get_storyboard(RequestInfo info)
 
   memJpeg = compress_jpeg(cf, rawImage.buffer, rawImage.width, rawImage.height);
 
-  for (counter=0; counter<info.split; ++counter) {
+  for (counter=0; counter<pageSize; ++counter) 
+  {
     if (frameList[counter]) av_free(frameList[counter]);
   }
   av_free(format_ctx);
