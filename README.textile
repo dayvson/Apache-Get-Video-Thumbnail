@@ -1,7 +1,7 @@
 h1(#apache_video_thumb_extractor). Apache Video Thumb Extractor Module
 
 Video Thumb Extractor is a module for Apache2 to extract an image from a video frame from a specific 
-second resizing/cropping it to a given size.
+second resizing/cropping it to a given size and to extract a storyboard(multiple video frames on sprite) from video.
 
 h1(#requirements). Requirements
 
@@ -14,6 +14,7 @@ All of these libraries was commonly distributed with "FFmpeg":http://ffmpeg.org 
 * avcodec >= 53.7.0 
 * avutil >= 51.9.1
 * swscale >= 2.0.0
+* libjpeg
 
 
 h1(#howtoconfigure). Configuration
@@ -31,7 +32,7 @@ h1(#howtouse). How to use
 
 After enable this module you can access using these urls
 This module can receive four parameters
-video       => Path from video. ex: /home/dayvson/bigbunny.ogg
+video       => Path from video relative to VideoThumb_MediasPath. ex: big.ogg => VideoThumb_MediasPath/big.ogg
 second      => Second of video (this module get the nearest keyframe to second) (Optional parameter in storyboard)
 width       => Optional parameter to resize width video frame
 height      => Optional parameter to resize height video frame
@@ -41,7 +42,7 @@ currentPage => Optional parameter to define the current page of storyboard
 pageSize    => Optional parameter to define how many frame one storyboard page must have
  
 *If you don't use width or height parameters, the frame dimension will be equal to the video*
-*If you use split parameter you can't use second parameter*
+*If you use split parameter you can't use second parameter, this function return a sprite with frames in a jpeg file*
 
 h1(#sample). Sample usage :
 
