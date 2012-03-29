@@ -22,18 +22,41 @@ To enable this module after installation edit httpd.conf file and in module sect
 LoadModule videothumb_module [module_path]/mod_videothumb.so
 [module_path] => Apache Directory modules in your architecture *
 
+VideoThumb_Enabled true => Enable videothumb module
+VideoThumb_MediasPath /video_sources/ => Path for videos in your filesystem
+VideoThumb_JpegQuality 90 => Jpeg quality
+
+
 h1(#howtouse). How to use
 
 After enable this module you can access using these urls
 This module can receive four parameters
-video  => Path from video. ex: /home/dayvson/bigbunny.ogg
-second => Second of video (this module get the nearest keyframe to second)
-width  => Optional parameter to resize width video frame
-height => Optional parameter to resize height video frame
+video       => Path from video. ex: /home/dayvson/bigbunny.ogg
+second      => Second of video (this module get the nearest keyframe to second) (Optional parameter in storyboard)
+width       => Optional parameter to resize width video frame
+height      => Optional parameter to resize height video frame
+split       => Optional parameter to create a storyboard if you define split=10 this module will return 10 frames from the beginner until the end of video
+columns     => Optional parameter to use with split parameter to define how many columns your storyboard must have
+currentPage => Optional parameter to define the current page of storyboard
+pageSize    => Optional parameter to define how many frame one storyboard page must have
+ 
 *If you don't use width or height parameters, the frame dimension will be equal to the video*
+*If you use split parameter you can't use second parameter*
 
 h1(#sample). Sample usage :
+
+h3(#sample_frame). Extract unique video frame:
 
 http://your_host/?video=bigbunny.ogg&second=30
 http://your_host/?video=bigbunny.ogg&second=30&width=640
 http://your_host/?video=bigbunny.ogg&second=30&width=640&height=360
+
+!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_frame.jpg(Sample Frame)!
+
+h3(#sample_storyboard). Extract storyboard frames(with(out) pagination):
+
+http://your_host/?video=bigbunny.ogg&height=100&split=30
+http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5
+http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5&currentPage=1&pageSize=10
+
+!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_storyboard.jpg(Sample storyboard)!
