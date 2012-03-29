@@ -1,3 +1,10 @@
+28/03/2012 - v0.4.0
+	Added pagination system for storyboard
+	Added module interface to get a frame or storyboard using parameters
+  Fixed a bug on storyboard sprite
+15/03/2012 - v0.3.0
+	Implemented storyboard in sprite
+	Get configuration from apache configuration file
 02/03/2012 - v0.2.0
 	Resize video frame
 	Receive parameters from querystring
