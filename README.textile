@@ -51,7 +51,7 @@ http://your_host/?video=bigbunny.ogg&second=30
 http://your_host/?video=bigbunny.ogg&second=30&width=640
 http://your_host/?video=bigbunny.ogg&second=30&width=640&height=360
 
-!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_frame.jpg(Sample Frame)!
+!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_frame.jpg?raw=true(Sample Frame)!
 
 h3(#sample_storyboard). Extract storyboard frames(with(out) pagination):
 
@@ -59,4 +59,4 @@ http://your_host/?video=bigbunny.ogg&height=100&split=30
 http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5
 http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5&currentPage=1&pageSize=10
 
-!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_storyboard.jpg(Sample storyboard)!
+!http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_storyboard.jpg?raw=true(Sample storyboard)!
