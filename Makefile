@@ -1,6 +1,6 @@
 #
-# Copyright (c) Maxwell Dayvson <dayvson@gmail.com>
-# Copyright (c) Tiago de Pádua <tiagopadua@gmail.com>
+# Copyright (c) 2012 - Maxwell Dayvson <dayvson@gmail.com>
+# Copyright (c) 2012 - Tiago de Pádua <tiagopadua@gmail.com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@ clean:
 	rm -Rf $(BINNAME) $(NAME) src/*.o src/*~ src/*.la src/*.lo src/*.slo src/*.so src/*.loT src/.libs src/*.jpg
 
 apxs: 
-	apxs -c $(FLAGS) src/util.c src/jpegencoder.c src/storyboard.c src/thumbnail.c src/module_main.c src/querystring.c  -o $(BINNAME) $(LIBS)
+	apxs -c $(FLAGS) src/util.c src/jpegencoder.c src/storyboard.c src/thumbnail.c src/video_thumbnail_module.c src/querystring.c -o $(BINNAME) $(LIBS)
 
 .PHONY : test
 test:
-	gcc $(CFLAGS) $(LIBS) src/util.c src/jpegencoder.c src/storyboard.c src/thumbnail.c src/querystring.c test/main.c -o $(NAME)
+	gcc $(CFLAGS) $(LIBS) src/util.c src/jpegencoder.c src/storyboard.c src/thumbnail.c src/querystring.c test/main.c -o $(NAME) && ./videothumb
