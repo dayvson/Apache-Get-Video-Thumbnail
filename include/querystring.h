@@ -1,6 +1,6 @@
 /*
- * Copyright (c) Maxwell Dayvson <dayvson@gmail.com>
- * Copyright (c) Tiago de Pádua <tiagopadua@gmail.com>
+ * Copyright (c) 2012 - Maxwell Dayvson <dayvson@gmail.com>
+ * Copyright (c) 2012 - Tiago de Pádua <tiagopadua@gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,8 @@ typedef struct _qrstr {
   int count;
 } QueryString;
 
-int parseQueryString(void** context, const char* querystring);
-const char* getParameter(void* context, const char* parName);
-void releaseContext(void* context);
+int parse_query_string(void** context, const char* querystring);
+const char* get_parameter(void* context, const char* parName);
+void release_context(void* context);
 
 #endif // __QUERYSTRING_H__

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) Maxwell Dayvson <dayvson@gmail.com>
- * Copyright (c) Tiago de Pádua <tiagopadua@gmail.com>
+ * Copyright (c) 2012 - Maxwell Dayvson <dayvson@gmail.com>
+ * Copyright (c) 2012 - Tiago de Pádua <tiagopadua@gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 
 #define INITIAL_MAX_PARAMETER_COUNT 50
 
-void* createNewContext(char** items, int count)
+void* create_new_context(char** items, int count)
 {
   if (!items) return NULL;
   
@@ -72,7 +72,7 @@ void* createNewContext(char** items, int count)
   return query;
 }
 
-void releaseContext(void* context)
+void release_context(void* context)
 {
   if (!context) return;
 
@@ -93,7 +93,7 @@ void releaseContext(void* context)
   free(qs);
 }
 
-int splitParameters(char*** items, const char* querystring)
+int split_parameters(char*** items, const char* querystring)
 {
   int count = 0;
 
@@ -125,20 +125,20 @@ int splitParameters(char*** items, const char* querystring)
   return count;
 }
 
-int parseQueryString(void** context, const char* querystring)
+int parse_query_string(void** context, const char* querystring)
 {
   char** items = NULL;
 
   if (querystring) {
-    int itemCount = splitParameters(&items, querystring);
-    (*context) = createNewContext(items, itemCount);    
+    int itemCount = split_parameters(&items, querystring);
+    (*context) = create_new_context(items, itemCount);    
     free(items);
   }
 
   return 0;
 }
 
-const char* getParameter(void* context, const char* parName)
+const char* get_parameter(void* context, const char* parName)
 {
   if (!context || !parName) return NULL;
 
