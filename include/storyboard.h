@@ -1,6 +1,6 @@
 /*
- * Copyright (c) Maxwell Dayvson <dayvson@gmail.com>
- * Copyright (c) Tiago de Pádua <tiagopadua@gmail.com>
+ * Copyright (c) 2012 - Maxwell Dayvson <dayvson@gmail.com>
+ * Copyright (c) 2012 - Tiago de Pádua <tiagopadua@gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without

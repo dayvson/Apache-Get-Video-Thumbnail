@@ -1,6 +1,6 @@
 /*
- * Copyright (c) Maxwell Dayvson <dayvson@gmail.com>
- * Copyright (c) Tiago de Pádua <tiagopadua@gmail.com>
+ * Copyright (c) 2012 Maxwell Dayvson <dayvson@gmail.com>
+ * Copyright (c) 2012 Tiago de Pádua <tiagopadua@gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 
-#include "module.h"
+#include "video_thumbnail_module.h"
 #include "storyboard.h"
 #include "thumbnail.h"
 #define BOOL int
@@ -48,50 +48,53 @@ typedef struct
   int quality;
 } module_config;
 
-static int videothumb_handler(request_rec *r) {
+static int videothumb_handler(request_rec *r) 
+{
   char fullVideoPath[MAX_PATH_LENGTH];
   
   if (!r) return DECLINED;
   module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
   
-  if (!conf->enabled) {
-    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...")
-     return DECLINED;
+  if (!conf->enabled) 
+  {
+    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...");
+    return DECLINED;
   }
   
-  if (r->args) {
+  if (r->args) 
+  {
     LOG_ERROR("request made: %s", r->args);
   
-    RequestInfo requestInfo;
-    ImageBuffer jpeg;
     void* ctx;
-    parseQueryString(&ctx, r->args);
+    parse_query_string(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
-    strncat(fullVideoPath, getParameter(ctx, "video"), MAX_PATH_LENGTH);
+    strncat(fullVideoPath, get_parameter(ctx, "video"), MAX_PATH_LENGTH);
   
-    const char* temp = getParameter(ctx, "split");
+    const char* temp = get_parameter(ctx, "split");
+    RequestInfo requestInfo;
     requestInfo.split = atoi(temp ? temp : ONE_VALUE);
-    temp = getParameter(ctx, "columns");
+    temp = get_parameter(ctx, "columns");
     requestInfo.columns = atoi(temp ? temp : ONE_VALUE);
     requestInfo.file = fullVideoPath;
     requestInfo.jpegQuality = conf->quality;
   
-    temp = getParameter(ctx,"width");
+    temp = get_parameter(ctx,"width");
     if(temp == NULL) requestInfo.width = 0;
     else requestInfo.width = atoi(temp);
   
-    temp = getParameter(ctx,"height");
+    temp = get_parameter(ctx,"height");
     if(temp == NULL) requestInfo.height = 0;
     else requestInfo.height = atoi(temp);
 
-    temp = getParameter(ctx,"pageSize");
+    temp = get_parameter(ctx,"pageSize");
     requestInfo.pageSize = temp ? atoi(temp) : requestInfo.split;
 
-    temp = getParameter(ctx,"currentPage");
+    temp = get_parameter(ctx,"currentPage");
     requestInfo.currentPage = atoi(temp ? temp : ONE_VALUE);
 
     init_libraries();
-    temp = getParameter(ctx, "second");
+    temp = get_parameter(ctx, "second");
+    ImageBuffer jpeg;
     if(temp == NULL) jpeg = get_storyboard(requestInfo);
     else {
       requestInfo.second =  atoi(temp ? temp : ONE_VALUE);
@@ -110,7 +113,8 @@ static int videothumb_handler(request_rec *r) {
   return OK;
 }
 
-static void register_hooks (apr_pool_t *p) {
+static void register_hooks (apr_pool_t *p) 
+{
    ap_hook_handler(videothumb_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
