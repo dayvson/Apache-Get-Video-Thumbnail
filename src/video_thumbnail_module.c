@@ -67,12 +67,11 @@ static int videothumb_handler(request_rec *r)
 
   if (r->args) 
   {
-    LOG_ERROR("Apache-Get-Video-Thumbnail acting");
-
     void* ctx;
     parse_query_string(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     if (!r->path_info) {
+       LOG_ERROR("Could not find 'filename' on the URI");
        return DECLINED;
     }
     strncat(fullVideoPath, r->path_info + 1, MAX_PATH_LENGTH);
@@ -104,18 +103,20 @@ static int videothumb_handler(request_rec *r)
     ImageBuffer jpeg;
     if(temp == NULL) jpeg = get_storyboard(requestInfo);
     else {
-      requestInfo.second =  atoi(temp ? temp : ONE_VALUE);
+      requestInfo.second = atoi(temp ? temp : ONE_VALUE);
       jpeg = get_thumbnail(requestInfo);
     }
   
     if (jpeg.buffer) {
       ap_set_content_type(r, "image/jpeg");
       ap_rwrite(jpeg.buffer, jpeg.size, r);
-      } else {
-        LOG_ERROR("JPEG INVALIDO!!!!!!!!!!!!!!!!");
-      }
+    } else {
+      LOG_ERROR("Cannot render thumbnail for this video");
+      return DECLINED;
+    }
   } else {
     LOG_ERROR("Querystring null");
+    return DECLINED;
   }
   return OK;
 }
