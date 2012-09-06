@@ -58,29 +58,20 @@ static int videothumb_handler(request_rec *r)
 
   if (!conf->enabled) 
   {
-//    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...");
     return DECLINED;
   }
   if (!(conf->app_path && (strstr(r->parsed_uri.path, conf->app_path) == r->parsed_uri.path)))
   {
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>> %s || %s", conf->app_path, r->parsed_uri.path);
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>> %d", strstr(r->parsed_uri.path, conf->app_path) == r->parsed_uri.path);
     return DECLINED;
   }
 
   if (r->args) 
   {
     LOG_ERROR("Apache-Get-Video-Thumbnail acting");
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->unparsed_uri);
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->uri);
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->path_info);
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->filename);
-//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->canonical_filename);
 
     void* ctx;
     parse_query_string(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
-//    strncat(fullVideoPath, get_parameter(ctx, "video"), MAX_PATH_LENGTH);
     if (!r->path_info) {
        return DECLINED;
     }
