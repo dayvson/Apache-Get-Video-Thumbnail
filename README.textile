@@ -47,15 +47,15 @@ LoadModule videothumb_module [module_path]/mod_videothumb.so
 [module_path] => Apache Directory modules in your architecture *
 
 ** VideoThumb_Enabled true => Enable videothumb module
-** VideoThumb_MediasPath /video_sources/ => Path for videos in your filesystem
-** VideoThumb_JpegQuality 90 => Jpeg quality
+** VideoThumb_MediasPath /www/my_videos/ => Path for videos in your filesystem
+** VideoThumb_AppPath /thumbnails/ => Path for which you want the module to respond (the URI path)
+** VideoThumb_JpegQuality 90 => Jpeg compress quality
 
 
 h1(#howtouse). How to use
 
 After enable this module you can access using these urls
 This module can receive four parameters:
-** video       => Path from video relative to VideoThumb_MediasPath. ex: big.ogg => VideoThumb_MediasPath/big.ogg
 ** second      => Second of video (this module get the nearest keyframe to second) (Optional parameter in storyboard)
 ** width       => Optional parameter to resize width video frame
 ** height      => Optional parameter to resize height video frame
@@ -72,9 +72,9 @@ h1(#sample). Sample usage :
 h3(#sample_frame). Extract an unique video frame:
 
 <pre>
-  http://your_host/?video=bigbunny.ogg&second=30
-  http://your_host/?video=bigbunny.ogg&second=30&width=640
-  http://your_host/?video=bigbunny.ogg&second=30&width=640&height=360
+  http://your_host.org/thumbnails/bigbunny.ogg?second=30
+  http://your_host.org/thumbnails/bigbunny.ogg?second=30&width=640
+  http://your_host.org/thumbnails/bigbunny.ogg?second=30&width=640&height=360
 </pre>
 
 !http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_frame.jpg?raw=true(Sample Frame)!
@@ -82,9 +82,9 @@ h3(#sample_frame). Extract an unique video frame:
 h3(#sample_storyboard). Extract a storyboard frames(with(out) pagination):
 
 <pre>
-  http://your_host/?video=bigbunny.ogg&height=100&split=30
-  http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5
-  http://your_host/?video=bigbunny.ogg&height=100&split=30&columns=5&currentPage=1&pageSize=10
+  http://your_host.org/thumbnails/bigbunny.ogg?height=100&split=30
+  http://your_host.org/thumbnails/bigbunny.ogg?height=100&split=30&columns=5
+  http://your_host.org/thumbnails/bigbunny.ogg?height=100&split=30&columns=5&currentPage=1&pageSize=10
 </pre>
 
 !http://github.com/dayvson/Apache-Get-Video-Thumbnail/blob/master/sample_storyboard.jpg?raw=true(Sample storyboard)!

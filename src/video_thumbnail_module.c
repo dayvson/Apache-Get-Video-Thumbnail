@@ -45,6 +45,7 @@ typedef struct
 {
   BOOL enabled;
   const char* medias_path;
+  const char* app_path;
   int quality;
 } module_config;
 
@@ -54,22 +55,37 @@ static int videothumb_handler(request_rec *r)
   
   if (!r) return DECLINED;
   module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
-  
+
   if (!conf->enabled) 
   {
-    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...");
+//    LOG_ERROR("VideoThumb module is disabled. Returning request to apache...");
     return DECLINED;
   }
-  
+  if (!(conf->app_path && (strstr(r->parsed_uri.path, conf->app_path) == r->parsed_uri.path)))
+  {
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>> %s || %s", conf->app_path, r->parsed_uri.path);
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>> %d", strstr(r->parsed_uri.path, conf->app_path) == r->parsed_uri.path);
+    return DECLINED;
+  }
+
   if (r->args) 
   {
-    LOG_ERROR("request made: %s", r->args);
-  
+    LOG_ERROR("Apache-Get-Video-Thumbnail acting");
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->unparsed_uri);
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->uri);
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->path_info);
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->filename);
+//    LOG_ERROR(">>>>>>>>>>>>>>>>>>>>> %s", r->canonical_filename);
+
     void* ctx;
     parse_query_string(&ctx, r->args);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
-    strncat(fullVideoPath, get_parameter(ctx, "video"), MAX_PATH_LENGTH);
-  
+//    strncat(fullVideoPath, get_parameter(ctx, "video"), MAX_PATH_LENGTH);
+    if (!r->path_info) {
+       return DECLINED;
+    }
+    strncat(fullVideoPath, r->path_info + 1, MAX_PATH_LENGTH);
+
     const char* temp = get_parameter(ctx, "split");
     RequestInfo requestInfo;
     requestInfo.split = atoi(temp ? temp : ONE_VALUE);
@@ -150,6 +166,12 @@ static const char* config_set_quality(cmd_parms* parms, void* mconfig, const cha
   cfg->quality = atoi(arg);
   return NULL;
 }
+static const char* config_set_app_path(cmd_parms* parms, void* mconfig, const char* arg)
+{
+  module_config* cfg = ap_get_module_config(parms->server->module_config, &videothumb_module);
+  cfg->app_path = arg;
+  return NULL;
+}
 
 static const command_rec config_array[] =
 {
@@ -165,6 +187,12 @@ static const command_rec config_array[] =
     NULL,
     RSRC_CONF,
     "Videothumb configuration key loaded: VideoThumb_MediasPath"),
+  AP_INIT_TAKE1(
+    "VideoThumb_AppPath",
+    config_set_app_path,
+    NULL,
+    RSRC_CONF,
+    "Videothumb configuration key loaded: VideoThumb_AppPath"),
   AP_INIT_TAKE1(
     "VideoThumb_JpegQuality",
     config_set_quality,

@@ -8,5 +8,6 @@
 .libs
 *.out
 *.jpg
+*.swp
 videothumb
 .DS_Store
