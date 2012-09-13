@@ -101,8 +101,9 @@ static int videothumb_handler(request_rec *r)
     init_libraries();
     temp = get_parameter(ctx, "second");
     ImageBuffer jpeg;
-    if(temp == NULL) jpeg = get_storyboard(requestInfo);
-    else {
+    if(temp == NULL) {
+      jpeg = get_storyboard(requestInfo);
+    } else {
       requestInfo.second = atoi(temp ? temp : ONE_VALUE);
       jpeg = get_thumbnail(requestInfo);
     }
@@ -208,3 +209,4 @@ module AP_MODULE_DECLARE_DATA videothumb_module = {
       config_array,
       register_hooks
 };
+

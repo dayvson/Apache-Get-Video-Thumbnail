@@ -1,8 +1,11 @@
-*.o 
+*.o
+src/*.o
 *~ 
 *.la 
 *.lo 
+src/*.lo
 *.slo 
+src/*.slo
 *.so 
 *.loT 
 .libs
@@ -11,3 +14,4 @@
 *.swp
 videothumb
 .DS_Store
+video_sample/1234567.ogg

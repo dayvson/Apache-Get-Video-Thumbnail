@@ -59,6 +59,7 @@ ImageBuffer get_thumbnail (RequestInfo request)
   if (avformat_find_stream_info(format_ctx, NULL) < 0)
   {
     LOG_ERROR("av_find_stream_info() has failed");
+    av_free(format_ctx);
     return memJpeg;
   }
   video_stream = -1;
@@ -78,11 +79,13 @@ ImageBuffer get_thumbnail (RequestInfo request)
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
   {
     LOG_ERROR("codec not found");
+    av_free(format_ctx);
     return memJpeg;
   }
-  if (avcodec_open2 (codec_ctx, codec, NULL) < 0)
+  if (avcodec_open2(codec_ctx, codec, NULL) < 0)
   {
     LOG_ERROR("unable to open codec");
+    av_free(format_ctx);
     return memJpeg;
   }
   ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, request.width, request.height);
