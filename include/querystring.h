@@ -46,3 +46,4 @@ const char* get_parameter(void* context, const char* parName);
 void release_context(void* context);
 
 #endif // __QUERYSTRING_H__
+
