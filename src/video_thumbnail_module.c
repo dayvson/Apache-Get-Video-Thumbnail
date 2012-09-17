@@ -52,7 +52,8 @@ typedef struct
 static int videothumb_handler(request_rec *r) 
 {
   char fullVideoPath[MAX_PATH_LENGTH];
-  
+  LOG_ERROR("BAAAAAHAHHHAHAHAHAHAHAHAH!!!!!!!!!!!");
+
   if (!r) return DECLINED;
   module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
 
@@ -72,6 +73,7 @@ static int videothumb_handler(request_rec *r)
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     if (!r->path_info) {
        LOG_ERROR("Could not find 'filename' on the URI");
+       release_context(ctx);
        return DECLINED;
     }
     strncat(fullVideoPath, r->path_info + 1, MAX_PATH_LENGTH);
@@ -100,6 +102,8 @@ static int videothumb_handler(request_rec *r)
 
     init_libraries();
     temp = get_parameter(ctx, "second");
+    release_context(ctx);
+
     ImageBuffer jpeg;
     if(temp == NULL) {
       jpeg = get_storyboard(requestInfo);
