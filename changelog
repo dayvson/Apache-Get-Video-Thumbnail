@@ -1,3 +1,7 @@
+04/10/2012 - v1.0.1
+	Corrected bug on closing lib AVFORMAT resources. Now memory consumption is stabilized
+02/10/2012 - v1.0.0
+	Memory managemet now uses apache's APR_POOL
 10/09/2012 - v0.9.0
 	Added new configuration parameter: VideoThumb_AppPath
 	Now returns DECLINED on errors (and return the control to Apache)
@@ -13,3 +17,4 @@
 	Receive parameters from querystring
 07/02/2012 - v0.1.0
 	Extract frame from video
+
