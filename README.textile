@@ -3,6 +3,8 @@ h1(#apache_video_thumb_extractor). Apache Video Thumb Extractor Module
 Video Thumb Extractor is a module for Apache2 to extract an image from a video in a specific 
 second, you can also resizing/cropping it to a given size and to extract a storyboard(multiple video frames on sprite) from video.
 
+h3(#requirements).This module is production ready
+
 h1(#requirements). Requirements
 
 This module depends from some libraries (headers and shared objects) which has to be installed before it:
