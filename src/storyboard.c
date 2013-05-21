@@ -31,7 +31,7 @@
 #include "jpegencoder.h"
 #include <math.h>
 
-ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int height) 
+ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int height, apr_pool_t* pool) 
 {
   ImageBuffer result;
   result.buffer = NULL;
@@ -44,15 +44,14 @@ ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int
   int rows = (count / cols) + ((count%cols) > 0 ? 1 : 0);
 
   result.size = width * height * cols * rows * PIXEL_LENGTH;
-  result.buffer = malloc(result.size);
+  result.buffer = apr_palloc(pool, result.size);
   result.width = cols * width;
   result.height = rows * height;
-  
-  
+
   int currentColumn = 0;
   int currentRow = 0;
   int iCount;
-  for (iCount=0; iCount<count; ++iCount) 
+  for (iCount=0; iCount<count; ++iCount)
   {
     int iHeight;
     for (iHeight=0; iHeight<height; ++iHeight) 
@@ -61,7 +60,6 @@ ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int
       int offsetDest = PIXEL_LENGTH * (width*(currentColumn + (currentRow*height+iHeight)*cols));
       if (offsetDest >= result.size) 
       {
-        LOG_ERROR("DEU PAU");
         continue;
       }
       void* src = &(frames[iCount]->data[0][offsetSrc]);
@@ -79,15 +77,12 @@ ImageBuffer join_images(AVFrame** frames, int count, int columns, int width, int
   return result;
 }
 
-
-
-ImageBuffer get_storyboard(RequestInfo info)
+ImageBuffer get_storyboard(RequestInfo info, apr_pool_t* pool)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
   AVCodec *codec;
   AVPacket packet_av;
-  AVFrame *frame_av = NULL;
   ImageBuffer memJpeg;
   memJpeg.buffer = NULL;
   memJpeg.size = 0;
@@ -100,14 +95,16 @@ ImageBuffer get_storyboard(RequestInfo info)
   int openResult = avformat_open_input(&format_ctx, info.file, NULL, NULL);
   if (openResult != 0)
   {
+    avformat_close_input(&format_ctx);
     LOG_ERROR("avformat_open_input() has failed: %s", info.file);
     char errBuffer[1000];
     av_strerror(openResult, errBuffer, 1000);
-    LOG_ERROR("ERROR: %s", errBuffer);
+    LOG_ERROR("Error was: %s", errBuffer);
     return memJpeg;
   }
   if (avformat_find_stream_info(format_ctx, NULL) < 0)
   {
+    avformat_close_input(&format_ctx);
     LOG_ERROR("av_find_stream_info() has failed");
     return memJpeg;
   }
@@ -122,16 +119,20 @@ ImageBuffer get_storyboard(RequestInfo info)
   }
   if (video_stream == -1)
   {
+    avformat_close_input(&format_ctx);
     LOG_ERROR("videostream not found");
+    return memJpeg;
   }
   codec_ctx = format_ctx->streams[video_stream]->codec;
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
   {
+    avformat_close_input(&format_ctx);
     LOG_ERROR("codec not found");
     return memJpeg;
   }
-  if (avcodec_open2 (codec_ctx, codec, NULL) < 0)
+  if (avcodec_open2(codec_ctx, codec, NULL) < 0)
   {
+    avformat_close_input(&format_ctx);
     LOG_ERROR("unable to open codec");
     return memJpeg;
   }
@@ -146,7 +147,7 @@ ImageBuffer get_storyboard(RequestInfo info)
     pageSize = end-start;  
   }
 
-  int64_t *framePosition = (int64_t*)malloc(sizeof(int64_t)*info.split);
+  int64_t *framePosition = (int64_t*)apr_palloc(pool, sizeof(int64_t)*info.split);  
   split_integer(format_ctx->duration, info.split, framePosition);
 
   ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, info.width, info.height);
@@ -154,13 +155,19 @@ ImageBuffer get_storyboard(RequestInfo info)
   for (start; start<end; ++start)
   {
     AVFrame* currentFrame = get_frame_by_second(codec_ctx, format_ctx, video_stream, framePosition[start]);
-    frameList[counter] = resize_frame(codec_ctx, currentFrame, &finalSize);
+    frameList[counter] = resize_frame(codec_ctx, currentFrame, &finalSize, pool);
     av_free(currentFrame);
     ++counter;
   }
-  ImageBuffer rawImage = join_images(frameList, pageSize, info.columns, finalSize.width, finalSize.height);
+  avcodec_close(codec_ctx);
+  ImageBuffer rawImage = join_images(frameList, pageSize, info.columns, finalSize.width, finalSize.height, pool);
   if (!rawImage.buffer) 
   {
+   avformat_close_input(&format_ctx);
+   for (counter=0; counter<pageSize; ++counter) 
+   {
+     if (frameList[counter]) av_free(frameList[counter]);
+   }
    LOG_ERROR("Invalid RAW joined image. Buffer size: %d\n", rawImage.size);
    return memJpeg;
   }
@@ -177,7 +184,7 @@ ImageBuffer get_storyboard(RequestInfo info)
   {
     if (frameList[counter]) av_free(frameList[counter]);
   }
-  av_free(format_ctx);
-  free(framePosition);
+  avformat_close_input(&format_ctx);
   return memJpeg;
 }
+

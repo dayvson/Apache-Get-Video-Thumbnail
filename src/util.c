@@ -110,21 +110,20 @@ AVFrame* get_frame_by_second(AVCodecContext* codec_ctx, AVFormatContext *format_
   return frame;
 }
 
-AVFrame *resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize) 
+AVFrame *resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize, apr_pool_t* pool) 
 {
   uint8_t *Buffer; 
   int     BufSiz; 
-  int     BufSizActual; 
   int     ImgFmt = PIX_FMT_YUVJ420P;
 
   //Alloc frame
   BufSiz = avpicture_get_size(PIX_FMT_RGB24, imageSize->width, imageSize->height );
-  Buffer = (uint8_t *)malloc(BufSiz);
+  Buffer = (uint8_t *)apr_pcalloc(pool, BufSiz);
   if (Buffer == NULL) 
   {
       return NULL;
   }
-  memset (Buffer, 0, BufSiz);
+//  memset (Buffer, 0, BufSiz);
 
   AVFrame *frameRGB_av = avcodec_alloc_frame();
   avpicture_fill((AVPicture *) frameRGB_av, Buffer, PIX_FMT_RGB24, imageSize->width, imageSize->height);

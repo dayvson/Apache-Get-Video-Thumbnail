@@ -32,10 +32,11 @@
 #ifndef __VIDEOTHUMB_STORYBOARD_H__
 #define __VIDEOTHUMB_STORYBOARD_H__
  
+#include "httpd.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "util.h"
 
-ImageBuffer get_storyboard(RequestInfo info);
+ImageBuffer get_storyboard(RequestInfo info, apr_pool_t* pool);
 
 #endif //__VIDEOTHUMB_STORYBOARD_H__

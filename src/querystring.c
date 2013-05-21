@@ -35,69 +35,47 @@
 
 #define INITIAL_MAX_PARAMETER_COUNT 50
 
-void* create_new_context(char** items, int count)
+void* create_new_context(char** items, int count, apr_pool_t* pool)
 {
   if (!items) return NULL;
   
-  QueryString *query = (QueryString*)malloc(sizeof(QueryString));
-  query->Item = (NameValuePair**)malloc(sizeof(NameValuePair*) * count);
+  QueryString *query = (QueryString*)apr_palloc(pool, sizeof(QueryString));
+  query->Item = (NameValuePair**)apr_palloc(pool, sizeof(NameValuePair*) * count);
   query->count = 0;
 
   int i=0;
   for (i=0; i<count; ++i) {
     if (!items[i]) continue;
     char* chPos = strchr(items[i], '=');
-    query->Item[i] = (NameValuePair*)malloc(sizeof(NameValuePair));
+    query->Item[i] = (NameValuePair*)apr_palloc(pool, sizeof(NameValuePair));
     if (chPos) {
       // Copy the name
       size_t nChars = ((size_t)chPos) - ((size_t)items[i]);
-      query->Item[i]->name = (char*)malloc(sizeof(char) * (nChars+1));
+      query->Item[i]->name = (char*)apr_palloc(pool, sizeof(char) * (nChars+1));
       strncpy(query->Item[i]->name, items[i], nChars);
       query->Item[i]->name[nChars] = '\0';
       // Copy the value
       ++chPos; // skip the '='
-      query->Item[i]->value = (char*)malloc(sizeof(char) * strlen(chPos));
+      query->Item[i]->value = (char*)apr_palloc(pool, sizeof(char) * strlen(chPos));
       strcpy(query->Item[i]->value, chPos);
     } else {
       // Copy the name
-      query->Item[i]->name = (char*)malloc(sizeof(char) * strlen(items[i]));
+      query->Item[i]->name = (char*)apr_palloc(pool, sizeof(char) * strlen(items[i]));
       strcpy(query->Item[i]->name, items[i]);
       // Fill the value with an empty string
-      query->Item[i]->value = (char*)malloc(sizeof(char));
+      query->Item[i]->value = (char*)apr_palloc(pool, sizeof(char));
       query->Item[i]->value[0] = '\0';
     }
-    free(items[i]);
     ++query->count;
   }
   return query;
 }
 
-void release_context(void* context)
-{
-  if (!context) return;
-
-  int i=0;
-  QueryString* qs = (QueryString*)context;
-  if (qs->Item) {
-    for (i=0; i<qs->count; ++i) {
-      if (qs->Item[i])
-      {
-        if (qs->Item[i]->name) free(qs->Item[i]->name);
-        if (qs->Item[i]->value) free(qs->Item[i]->value);
-        free(qs->Item[i]);
-      }
-    }
-    free(qs->Item);
-    qs->Item = NULL;
-  }
-  free(qs);
-}
-
-int split_parameters(char*** items, const char* querystring)
+int split_parameters(char*** items, const char* querystring, apr_pool_t* pool)
 {
   int count = 0;
 
-  (*items) = (char**)malloc(sizeof(char*) * INITIAL_MAX_PARAMETER_COUNT);
+  (*items) = (char**)apr_palloc(pool, sizeof(char*) * INITIAL_MAX_PARAMETER_COUNT);
   if (querystring) {
     const char* oldPos = querystring;
     char* nextPos = strchr(querystring, '&');
@@ -106,7 +84,7 @@ int split_parameters(char*** items, const char* querystring)
       if (count >= INITIAL_MAX_PARAMETER_COUNT) break;
 
       size_t strSize = nextPos - oldPos;
-      char *currentParam = (char*)malloc(strSize+1);
+      char *currentParam = (char*)apr_palloc(pool, strSize+1);
       strncpy(currentParam, oldPos, strSize);
       currentParam[strSize] = '\0';
       (*items)[count] = currentParam;
@@ -117,7 +95,7 @@ int split_parameters(char*** items, const char* querystring)
     }
     // fill the last object
     size_t strSize = strlen(oldPos);
-    (*items)[count] = (char*)malloc(strSize+1);
+    (*items)[count] = (char*)apr_palloc(pool, strSize+1);
     strncpy((*items)[count], oldPos, strSize);
     (*items)[count][strSize] = '\0';
     ++count;
@@ -125,14 +103,13 @@ int split_parameters(char*** items, const char* querystring)
   return count;
 }
 
-int parse_query_string(void** context, const char* querystring)
+int parse_query_string(void** context, const char* querystring, apr_pool_t* pool)
 {
   char** items = NULL;
 
   if (querystring) {
-    int itemCount = split_parameters(&items, querystring);
-    (*context) = create_new_context(items, itemCount);    
-    free(items);
+    int itemCount = split_parameters(&items, querystring, pool);
+    (*context) = create_new_context(items, itemCount, pool);    
   }
 
   return 0;

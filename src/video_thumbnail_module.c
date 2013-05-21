@@ -52,7 +52,6 @@ typedef struct
 static int videothumb_handler(request_rec *r) 
 {
   char fullVideoPath[MAX_PATH_LENGTH];
-  LOG_ERROR("BAAAAAHAHHHAHAHAHAHAHAHAH!!!!!!!!!!!");
 
   if (!r) return DECLINED;
   module_config* conf = ap_get_module_config(r->server->module_config, &videothumb_module);
@@ -66,14 +65,13 @@ static int videothumb_handler(request_rec *r)
     return DECLINED;
   }
 
-  if (r->args) 
+  if (r->args)
   {
     void* ctx;
-    parse_query_string(&ctx, r->args);
+    parse_query_string(&ctx, r->args, r->pool);
     strncpy(fullVideoPath, conf->medias_path, MAX_PATH_LENGTH);
     if (!r->path_info) {
        LOG_ERROR("Could not find 'filename' on the URI");
-       release_context(ctx);
        return DECLINED;
     }
     strncat(fullVideoPath, r->path_info + 1, MAX_PATH_LENGTH);
@@ -102,19 +100,19 @@ static int videothumb_handler(request_rec *r)
 
     init_libraries();
     temp = get_parameter(ctx, "second");
-    release_context(ctx);
 
     ImageBuffer jpeg;
     if(temp == NULL) {
-      jpeg = get_storyboard(requestInfo);
+      jpeg = get_storyboard(requestInfo, r->pool);
     } else {
       requestInfo.second = atoi(temp ? temp : ONE_VALUE);
-      jpeg = get_thumbnail(requestInfo);
+      jpeg = get_thumbnail(requestInfo, r->pool);
     }
   
     if (jpeg.buffer) {
       ap_set_content_type(r, "image/jpeg");
       ap_rwrite(jpeg.buffer, jpeg.size, r);
+      free(jpeg.buffer);
     } else {
       LOG_ERROR("Cannot render thumbnail for this video");
       return DECLINED;

@@ -143,6 +143,8 @@ ImageBuffer compress_jpeg(ImageConf imageConf, uint8_t * buffer, int out_width, 
     jpeg_finish_compress(&cinfo);
     f.buffer = outbuffer;
     f.size = outlen;
+
     jpeg_destroy_compress(&cinfo);
     return f;
 }
+

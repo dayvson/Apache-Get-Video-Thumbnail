@@ -31,6 +31,8 @@
 #ifndef __QUERYSTRING_H__
 #define __QUERYSTRING_H__
 
+#include "httpd.h"
+
 typedef struct _nvpair {
   char *name;
   char *value;
@@ -41,9 +43,8 @@ typedef struct _qrstr {
   int count;
 } QueryString;
 
-int parse_query_string(void** context, const char* querystring);
+int parse_query_string(void** context, const char* querystring, apr_pool_t* pool);
 const char* get_parameter(void* context, const char* parName);
-void release_context(void* context);
 
 #endif // __QUERYSTRING_H__
 

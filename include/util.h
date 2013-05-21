@@ -39,6 +39,7 @@
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <jpeglib.h>
+#include "httpd.h"
 
 #define PIXEL_LENGTH 3
 #define OUTPUT_BUF_SIZE 4096
@@ -89,7 +90,7 @@ int parse_integer(const char* intStr, int defaultValue);
 void split_integer(int64_t duration, int count, int64_t *result);
 AVFrame* get_frame_by_second(AVCodecContext* codec_ctx, AVFormatContext *format_ctx, int video_stream, int64_t second);
 ImageSize get_new_frame_size(int input_width, int input_height, int output_width, int output_height);
-AVFrame* resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize);
+AVFrame* resize_frame(AVCodecContext *codec_ctx, AVFrame *frame_av, ImageSize* imageSize, apr_pool_t* pool);
 void init_libraries(void);
 static void LOG_ERROR_DATE(){
   time_t log_time;

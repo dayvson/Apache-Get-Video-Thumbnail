@@ -33,6 +33,6 @@
 
 #include "util.h"
 
-ImageBuffer compress_jpeg(ImageConf imageConf, uint8_t * buffer, int out_width, int out_height);
+ImageBuffer compress_jpeg(ImageConf imageConf, uint8_t* buffer, int out_width, int out_height);
 
 #endif //__VIDEOTHUMB_JPEGENCODER_H__

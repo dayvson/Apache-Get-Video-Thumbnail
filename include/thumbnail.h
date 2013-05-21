@@ -32,9 +32,10 @@
 #ifndef __VIDEOTHUMB_THUMBNAIL_H__
 #define __VIDEOTHUMB_THUMBNAIL_H__
  
+#include "httpd.h"
 #include "util.h"
 
 void tve_init_libraries(void);
-ImageBuffer get_thumbnail(RequestInfo request);
+ImageBuffer get_thumbnail(RequestInfo request, apr_pool_t* pool);
 
 #endif //__VIDEOTHUMB_THUMBNAIL_H__

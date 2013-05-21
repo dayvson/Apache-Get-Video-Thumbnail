@@ -31,7 +31,7 @@
 #include "jpegencoder.h"
 #include "thumbnail.h"
 
-ImageBuffer get_thumbnail (RequestInfo request)
+ImageBuffer get_thumbnail (RequestInfo request, apr_pool_t* pool)
 {
   AVFormatContext *format_ctx;
   AVCodecContext *codec_ctx;
@@ -50,6 +50,7 @@ ImageBuffer get_thumbnail (RequestInfo request)
   int openResult = avformat_open_input(&format_ctx, request.file, NULL, NULL);
   if (openResult != 0)
   {
+    av_free(format_ctx);
     LOG_ERROR("avformat_open_input() has failed: %s", request.file);
     char errBuffer[1000];
     av_strerror(openResult, errBuffer, 1000);
@@ -58,6 +59,7 @@ ImageBuffer get_thumbnail (RequestInfo request)
   }
   if (avformat_find_stream_info(format_ctx, NULL) < 0)
   {
+    av_free(format_ctx);
     LOG_ERROR("av_find_stream_info() has failed");
     av_free(format_ctx);
     return memJpeg;
@@ -73,19 +75,20 @@ ImageBuffer get_thumbnail (RequestInfo request)
   }
   if (video_stream == -1)
   {
+    av_free(format_ctx);
     LOG_ERROR("videostream not found");
   }
   codec_ctx = format_ctx->streams[video_stream]->codec;
   if ((codec = avcodec_find_decoder(codec_ctx->codec_id)) == NULL)
   {
-    LOG_ERROR("codec not found");
     av_free(format_ctx);
+    LOG_ERROR("codec not found");
     return memJpeg;
   }
   if (avcodec_open2(codec_ctx, codec, NULL) < 0)
   {
-    LOG_ERROR("unable to open codec");
     av_free(format_ctx);
+    LOG_ERROR("unable to open codec");
     return memJpeg;
   }
   ImageSize finalSize = get_new_frame_size(codec_ctx->width, codec_ctx->height, request.width, request.height);
@@ -93,7 +96,7 @@ ImageBuffer get_thumbnail (RequestInfo request)
   AVFrame* currentFrame = get_frame_by_second(codec_ctx, format_ctx, video_stream, request.second * AV_TIME_BASE);
   if(currentFrame)
   {
-    frame = resize_frame(codec_ctx, currentFrame, &finalSize);
+    frame = resize_frame(codec_ctx, currentFrame, &finalSize, pool);
     av_free(currentFrame);    
   }
   ImageConf cf;
@@ -103,6 +106,7 @@ ImageBuffer get_thumbnail (RequestInfo request)
   cf.baseline = 1;
   memJpeg = compress_jpeg(cf, frame->data[0], finalSize.width, finalSize.height);
   av_free(frame);
-  av_free(format_ctx);
+  avformat_close_input(format_ctx);
   return memJpeg;
 }
+
