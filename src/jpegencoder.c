@@ -40,7 +40,7 @@ boolean empty_mem_output_buffer (j_compress_ptr cinfo)
   nextbuffer = (JOCTET *)malloc(nextsize);
   if (nextbuffer == NULL)
   {
-    return;
+    return FALSE;
   } 
   memcpy(nextbuffer, dest->buffer, dest->bufsize);
   if (dest->newbuffer != NULL) 
